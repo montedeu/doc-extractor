@@ -177,3 +177,51 @@ def test_currency_markers_are_whole_words():
 
 def test_lowercase_homoglyphs():
     assert fold_homoglyphs("kmthb") == "кмтнв"
+
+
+def test_vat_exempt_with_signature_below():
+    text = text_of("10") + "Директор ______ Омаров Т.Б.  02.11.2026\n"
+    r = run(text, gold("10"))
+    assert r.vat_amount == 0
+    assert not any("not_in_text" in w and "vat_amount" in w for w in r.warnings)
+
+
+def test_vat_exempt_with_phone_below():
+    text = text_of("10") + "Тел.: +7 727 123 45 67\n"
+    r = run(text, gold("10"))
+    assert r.vat_amount == 0
+    assert not any("not_in_text" in w and "vat_amount" in w for w in r.warnings)
+
+
+def test_vat_price_line_with_number_still_not_exempt():
+    text = "Счёт № 5 от 12.11.2026\nЦена без НДС: 100 000\nПодпись 02.11.2026\n"
+    ans = gold("01") | {"vat_amount": 0, "total_amount": 100000}
+    assert run(text, ans).vat_amount is None
+
+
+def test_doc_number_homoglyphs_status_ok():
+    from doc_extractor.grounding import ground
+    from doc_extractor.schema import ModelAnswer
+
+    text = "Счёт № AB-12 от 12.11.2026\n"  # латиница
+    a = ModelAnswer.model_validate(gold("01") | {"doc_number": "АВ-12"})  # кириллица
+    g = ground(a, analyze(text))
+    assert g.status["doc_number"] == "ok"
+    assert g.answer.doc_number == "АВ-12"
+    b = ModelAnswer.model_validate(gold("01") | {"doc_number": "312"})
+    assert ground(b, analyze("Счёт № 3l2")).status["doc_number"] == "ocr_corrected"
+
+
+def _vat0(text: str):
+    return run(text, gold("01") | {"vat_amount": 0, "total_amount": 100000}).vat_amount
+
+
+def test_vat_exempt_phrase_across_line_break():
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nОсвобождено от\nНДС\n") == 0
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nНДС\nне облагается\n") == 0
+
+
+def test_bare_without_vat_must_be_whole_line():
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nСумма без НДС:\n100 000\n") is None
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nЦена без НДС\n") is None
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nБез НДС.\n") == 0

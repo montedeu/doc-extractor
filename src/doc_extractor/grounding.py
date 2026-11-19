@@ -8,6 +8,7 @@ from doc_extractor.bin_check import bin_checksum_ok
 from doc_extractor.normalize import (
     BinCandidate,
     DocFacts,
+    fold_homoglyphs,
     name_core,
     name_core_text,
     normalize_string,
@@ -20,8 +21,9 @@ _VAT_WORD = re.compile(r"ндс|ққс")
 _VAT_EXEMPT = re.compile(
     r"ндс\s+не\s+облагается|не\s+облагается\s+ндс|освобожд\w*\s+от\s+ндс"
     r"|ққс\s*-?\s*сыз|ққс\s+салынбайды"
-    r"|(?<![^\W\d_])без\s+ндс(?![^\n]*\d)"  # «Без НДС» без числа дальше в строке
 )
+# голое «Без НДС»: вся строка — эта фраза (допускается пара «ҚҚС-сыз / Без НДС»)
+_VAT_BARE = re.compile(r"(?:ққс\s*-?\s*сыз\s*/\s*)?без\s+ндс\s*[:.]?")
 _L = r"[а-яёәіңғүұқөһa-z0-9]"
 _B = r"(?<![^\W\d_])(?<!-)"  # слева не буква и не дефис
 _E = r"(?![^\W\d_])(?!-)"
@@ -172,8 +174,10 @@ def _doc_number_status(value: str, facts: DocFacts) -> FieldStatus | None:
     norm = normalize_string(value)
     if not norm or not re.search(rf"(?<!{_L}){re.escape(norm)}(?!{_L})", facts.folded):
         return None
-    raw = " ".join(value.casefold().split())
-    return "ok" if raw in " ".join(facts.text.casefold().split()) else "ocr_corrected"
+    # двойники (латиница/кириллица) не OCR-правка, как у названия
+    raw = " ".join(fold_homoglyphs(value).casefold().split())
+    text = " ".join(fold_homoglyphs(facts.text).casefold().split())
+    return "ok" if raw in text else "ocr_corrected"
 
 
 def _name_in_text(value: str, text_core: str) -> bool:
@@ -215,7 +219,10 @@ def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
 
     if a.vat_amount is not None:
         if a.vat_amount == 0:
-            vat_st: FieldStatus | None = "ok" if _VAT_EXEMPT.search(facts.folded) else None
+            exempt = _VAT_EXEMPT.search(facts.folded) or any(
+                _VAT_BARE.fullmatch(x.strip()) for x in facts.lines
+            )
+            vat_st: FieldStatus | None = "ok" if exempt else None
         elif _VAT_WORD.search(facts.folded):
             vat_st = _number_status(a.vat_amount, facts)
         else:

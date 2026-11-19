@@ -93,3 +93,41 @@ def test_vat_line_does_not_hide_words_mismatch():
 def test_fractional_digits_compare_integer_part():
     text = "Итого: 1 000,50\nСумма прописью: пять тысяч тенге"
     assert len(warnings_of(text, "amount_words_mismatch")) == 1
+
+
+def test_subtotal_does_not_trigger_words_mismatch():
+    text = (
+        "Итого: 128 400\nНДС 12%: 15 408\n"
+        "Всего к оплате: Сто сорок три тысячи восемьсот восемь тенге 00 тиын"
+    )
+    assert warnings_of(text, "amount_words_mismatch") == []
+
+
+def test_bare_scale_word_is_not_amount():
+    text = "Сумма, тысяч тенге\nИтого: 100"
+    assert warnings_of(text, "amount_words_mismatch") == []
+
+
+def test_period_and_payment_dates_not_conflicts():
+    a = "Акт № 5 от 31.10.2026 за период от 01.10.2026 по 31.10.2026"
+    b = "Счёт на оплату № 5 от 31.10.2026 (оплата от 01.11.2026)"
+    assert warnings_of(a, "conflicting_dates") == []
+    assert warnings_of(b, "conflicting_dates") == []
+
+
+def test_prepayment_not_conflict():
+    text = "К оплате (предоплата 50%): 74 472 тенге\nВсего к оплате: 148 944"
+    assert warnings_of(text, "conflicting_totals") == []
+
+
+def test_number_from_needs_document_title_before_it():
+    text = (
+        "Счёт № 5 от 01.02.2026\nПлатёжное поручение № 3 от 10.02.2026\n"
+        "Основание: протокол № 4 от 01.01.2025"
+    )
+    assert warnings_of(text, "conflicting_dates") == []
+
+
+def test_prepayment_excluded_from_fallback_words_check():
+    text = "Итого: 1000\nК оплате аванс: 500\nпятьсот тенге"
+    assert len(warnings_of(text, "amount_words_mismatch")) == 1

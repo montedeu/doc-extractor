@@ -39,7 +39,11 @@ _SCALES = {
 }
 _WORD = re.compile(r"[^\W\d_]+")
 _JOINERS = " \t\n\r\u00a0\u202f\u2009-"
-_CURRENCY = re.compile(r"(тенге|теңге|тг|рубл\w*|доллар\w*|евро|usd|кzт)$")
+# маркеры валюты сверки (grounding._CURRENCY) плюс рубли; после fold_homoglyphs «EUR» -> «еur»
+_CURRENCY = re.compile(r"(тенге|теңге|тг|рубл\w*|долл\w*|евро|usd|[eе]ur|кzт)$")
+_CURRENCY_SIGNS = "₸€$"
+# фраза из одного слова масштаба без числительного перед ним («тысяч тенге») — заголовок, не сумма
+_BARE_SCALES = {"тысяч", "тысячи", "мың", "миллиона", "миллионов"}
 
 
 def _is_numeral(w: str) -> bool:
@@ -103,7 +107,11 @@ def find_amounts_in_words(text: str) -> list[int]:
             and not text[toks[j - 1][1] : toks[j][0]].strip(_JOINERS)
             and _is_currency(toks[j][2])
         )
-        if after_ok and not (before and before[-1].isdigit()):
+        if not after_ok:
+            sign = text[toks[j - 1][1] :].lstrip(" \t\u00a0\u202f\u2009")[:1]
+            after_ok = sign != "" and sign in _CURRENCY_SIGNS
+        bare = j - i == 1 and toks[i][2] in _BARE_SCALES
+        if after_ok and not bare and not (before and before[-1].isdigit()):
             out.append(_value([t[2] for t in toks[i:j]]))
         i = j
     return out
