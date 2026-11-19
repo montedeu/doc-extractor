@@ -16,8 +16,9 @@ EXIT_LLM_UNAVAILABLE = 3
 
 
 def _decode(data: bytes) -> str:
-    # utf-8-sig снимает BOM, если он есть
-    return data.decode("utf-8-sig")
+    # utf-8-sig снимает BOM, если он есть; переводы строк приводим к \n, как при чтении файла
+    text = data.decode("utf-8-sig")
+    return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def main(

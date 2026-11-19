@@ -1,8 +1,11 @@
 import io
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 from doc_extractor.cli import main
 from doc_extractor.llm import LLMUnavailableError, ScriptedClient
@@ -134,9 +137,11 @@ def test_stdout_reconfigured_to_utf8_when_not_passed(monkeypatch):
 
 
 def test_subprocess_empty_stdin_exits_0():
+    # проверяем код текущего checkout, а не установленный в .venv пакет
     proc = subprocess.run(
         [sys.executable, "-m", "doc_extractor", "extract", "-"],
         input=b"", capture_output=True, timeout=60,
+        env={**os.environ, "PYTHONPATH": str(ROOT / "src")}, cwd=ROOT,
     )
     assert proc.returncode == 0
     data = json.loads(proc.stdout.decode("utf-8"))
@@ -166,6 +171,31 @@ def test_bom_utf8_file_is_read(tmp_path):
     code, _, _ = run(["extract", str(path)], client)
     assert code == 0
     assert "﻿" not in client.calls[0][-1]["content"]
+
+
+def test_crlf_stdin_equals_file(tmp_path):
+    data = DOC_02.read_bytes().replace(b"\n", b"\r\n")
+    path = tmp_path / "crlf.txt"
+    path.write_bytes(data)
+    file_client = ScriptedClient([VALID_JSON])
+    assert run(["extract", str(path)], file_client)[0] == 0
+    stdin_client = ScriptedClient([VALID_JSON])
+    stdin = io.TextIOWrapper(io.BytesIO(data), encoding="utf-8")
+    assert run(["extract", "-"], stdin_client, stdin_text=stdin)[0] == 0
+    from_file = file_client.calls[0][-1]["content"]
+    assert stdin_client.calls[0][-1]["content"] == from_file
+    assert "\r" not in from_file
+
+
+@pytest.mark.parametrize("raw, expected", [
+    (b"\xef\xbb\xbfone\r\ntwo\rthree\n", "one\ntwo\nthree\n"),
+    (b"\xef\xbb\xbf\r\nx", "\nx"),
+])
+def test_stdin_bom_and_newlines_normalized(raw, expected):
+    client = ScriptedClient([VALID_JSON])
+    stdin = io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8")
+    assert run(["extract", "-"], client, stdin_text=stdin)[0] == 0
+    assert client.calls[0][-1]["content"] == expected
 
 
 def test_cyrillic_is_not_escaped_in_stdout():

@@ -4,6 +4,7 @@ python eval.py [--mode replay|live|record] [--model M]
 """
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -19,6 +20,7 @@ from doc_extractor.llm import (
     model_from_env,
 )
 from doc_extractor.pipeline import extract
+from doc_extractor.prompt import SYSTEM_PROMPT
 from doc_extractor.scoring import evaluate, format_report
 
 ROOT = Path(__file__).parent
@@ -29,6 +31,9 @@ REPORT_PATH = ROOT / "results" / "eval_report.json"
 
 EXIT_NO_RESPONSES = 1
 EXIT_LLM_UNAVAILABLE = 3
+
+PROMPT_SHA = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+PROMPT_WARNING = "записанные ответы сняты на другой версии промпта — make record"
 
 
 class RecordingClient:
@@ -48,8 +53,11 @@ def model_dir(model: str) -> Path:
     return RESPONSES_DIR / re.sub(r"[^A-Za-z0-9._-]", "_", model)
 
 
-def load_responses(path: Path) -> list[str]:
-    """Читает записанный ответ; ValueError, если файл битый или без ключа responses."""
+def load_responses(path: Path) -> tuple[list[str], str | None]:
+    """Читает записанные ответы и sha256 промпта (None, если поля нет).
+
+    ValueError, если файл битый или без ключа responses.
+    """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         responses = data["responses"]
@@ -57,7 +65,7 @@ def load_responses(path: Path) -> list[str]:
         raise ValueError(f"битый файл {path.name} ({type(e).__name__}); запишите: make record") from e
     if not isinstance(responses, list) or not all(isinstance(r, str) for r in responses):
         raise ValueError(f"в {path.name} responses не список строк; запишите: make record")
-    return responses
+    return responses, data.get("prompt_sha256")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -89,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     results: dict[str, dict] = {}
     errors: dict[str, str] = {}
     recorded: dict[str, list[str]] = {}
+    prompt_stale = False
     for doc_id in golds:
         text = (DOCS_DIR / f"{doc_id}.txt").read_text(encoding="utf-8-sig")
         recorder: RecordingClient | None = None
@@ -98,10 +107,12 @@ def main(argv: list[str] | None = None) -> int:
                 errors[doc_id] = f"нет записанного ответа {path.name}; запишите: make record"
                 continue
             try:
-                client: LLMClient = ScriptedClient(load_responses(path))
+                responses, recorded_sha = load_responses(path)
             except ValueError as e:
                 errors[doc_id] = str(e)
                 continue
+            prompt_stale = prompt_stale or recorded_sha != PROMPT_SHA
+            client: LLMClient = ScriptedClient(responses)
         else:
             client = OllamaClient(model)
             if args.mode == "record":
@@ -133,15 +144,23 @@ def main(argv: list[str] | None = None) -> int:
         out.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         for doc_id, responses in recorded.items():
-            payload = {"model": model, "recorded_at": stamp, "responses": responses}
+            payload = {
+                "model": model,
+                "recorded_at": stamp,
+                "prompt_sha256": PROMPT_SHA,
+                "responses": responses,
+            }
             (out / f"{doc_id}.json").write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
             )
 
+    if prompt_stale:
+        print(PROMPT_WARNING, file=sys.stderr)
+
     report = evaluate(results, golds)
     for doc_id, message in errors.items():
         report.per_doc[doc_id] = {"error": message}
-    print(format_report(report))
+    print(format_report(report, total_docs=len(golds)))
 
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(

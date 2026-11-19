@@ -16,7 +16,7 @@ class LLMUnavailableError(Exception):
     """Ollama не запущена или модель не скачана."""
 
 
-class ScriptExhaustedError(Exception):
+class ScriptExhaustedError(AssertionError):
     """ScriptedClient: заготовленные ответы кончились, а вызов пришёл."""
 
 
@@ -73,4 +73,4 @@ class OllamaClient:
             ) from e
         except (httpx.HTTPError, ConnectionError) as e:
             raise LLMUnavailableError(f"Ollama недоступна: {e}") from e
-        return response["message"]["content"]
+        return response["message"]["content"] or ""

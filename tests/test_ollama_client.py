@@ -32,6 +32,11 @@ def test_request_options_and_timeout(monkeypatch):
     assert seen["chat"]["think"] is False
 
 
+def test_none_content_becomes_empty_string(monkeypatch):
+    patch_client(monkeypatch, lambda **kw: {"message": {"content": None}})
+    assert OllamaClient("m").complete(MSGS) == ""
+
+
 @pytest.mark.parametrize("exc", [
     ollama.ResponseError("model 'm' not found", 404),
     ollama.ResponseError("boom", 500),

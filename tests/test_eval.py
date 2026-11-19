@@ -1,9 +1,14 @@
+import hashlib
 import json
 
 import pytest
 
 import eval as eval_script
-from doc_extractor.llm import LLMUnavailableError
+from doc_extractor.llm import LLMUnavailableError, ScriptExhaustedError
+from doc_extractor.prompt import SYSTEM_PROMPT
+
+PROMPT_SHA = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+PROMPT_WARNING = "записанные ответы сняты на другой версии промпта — make record"
 
 VALID = {
     "doc_type": "invoice", "supplier_name": None, "supplier_bin": None,
@@ -27,10 +32,14 @@ def env(tmp_path, monkeypatch):
     return tmp_path
 
 
-def write_response(env, doc, responses, model="m:1"):
+def write_payload(doc, payload, model="m:1"):
     d = eval_script.model_dir(model)
     d.mkdir(parents=True, exist_ok=True)
-    (d / f"{doc}.json").write_text(json.dumps({"responses": responses}), encoding="utf-8")
+    (d / f"{doc}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def write_response(env, doc, responses, model="m:1"):
+    write_payload(doc, {"responses": responses, "prompt_sha256": PROMPT_SHA}, model)
 
 
 def run(*args):
@@ -95,3 +104,54 @@ def test_record_unavailable_on_second_doc_writes_nothing(env, monkeypatch):
     monkeypatch.setattr(eval_script, "OllamaClient", Flaky)
     assert run("--mode", "record") == 3
     assert list((env / "responses").rglob("*.json")) == []
+
+
+def test_script_exhausted_is_assertion_error():
+    assert issubclass(ScriptExhaustedError, AssertionError)
+
+
+def test_report_shows_documents_count(env, capsys):
+    (env / "docs" / "doc_03.txt").write_text("текст", encoding="utf-8")
+    (env / "gold" / "doc_03.json").write_text(json.dumps(GOLD), encoding="utf-8")
+    write_response(env, "doc_01", [json.dumps(VALID)])
+    write_response(env, "doc_02", [json.dumps(VALID)])
+    # doc_03 без записанного ответа: ошибка воспроизведения
+    assert run() == 1
+    assert "Документов в расчёте: 2 из 3" in capsys.readouterr().out
+
+
+def test_record_writes_prompt_sha256(env, monkeypatch):
+    class Ok:
+        def __init__(self, model=None):
+            self.model = model
+
+        def complete(self, messages):
+            return json.dumps(VALID)
+
+    monkeypatch.setattr(eval_script, "OllamaClient", Ok)
+    assert run("--mode", "record") == 0
+    path = eval_script.model_dir("m:1") / "doc_01.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["prompt_sha256"] == hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+
+
+def test_replay_warns_on_prompt_mismatch_but_exits_0(env, capsys):
+    for doc in ("doc_01", "doc_02"):
+        write_payload(doc, {"responses": [json.dumps(VALID)], "prompt_sha256": "0" * 64})
+    assert run() == 0
+    err = capsys.readouterr().err
+    assert err.count(PROMPT_WARNING) == 1
+
+
+def test_replay_warns_when_prompt_sha_missing(env, capsys):
+    for doc in ("doc_01", "doc_02"):
+        write_payload(doc, {"responses": [json.dumps(VALID)]})
+    assert run() == 0
+    assert PROMPT_WARNING in capsys.readouterr().err
+
+
+def test_replay_no_warning_on_matching_prompt(env, capsys):
+    for doc in ("doc_01", "doc_02"):
+        write_response(env, doc, [json.dumps(VALID)])
+    assert run() == 0
+    assert PROMPT_WARNING not in capsys.readouterr().err
