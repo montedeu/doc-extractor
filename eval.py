@@ -5,6 +5,7 @@ python eval.py [--mode replay|live|record] [--model M]
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,7 @@ from doc_extractor.llm import (
     LLMUnavailableError,
     OllamaClient,
     ScriptedClient,
+    ScriptExhaustedError,
     model_from_env,
 )
 from doc_extractor.pipeline import extract
@@ -43,7 +45,19 @@ class RecordingClient:
 
 
 def model_dir(model: str) -> Path:
-    return RESPONSES_DIR / model.replace(":", "_")
+    return RESPONSES_DIR / re.sub(r"[^A-Za-z0-9._-]", "_", model)
+
+
+def load_responses(path: Path) -> list[str]:
+    """Читает записанный ответ; ValueError, если файл битый или без ключа responses."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        responses = data["responses"]
+    except (json.JSONDecodeError, KeyError, TypeError, UnicodeDecodeError) as e:
+        raise ValueError(f"битый файл {path.name} ({type(e).__name__}); запишите: make record") from e
+    if not isinstance(responses, list) or not all(isinstance(r, str) for r in responses):
+        raise ValueError(f"в {path.name} responses не список строк; запишите: make record")
+    return responses
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -64,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"Нет эталона для {doc_id}, документ пропущен", file=sys.stderr)
 
-    if args.mode == "replay" and not model_dir(model).is_dir():
+    if args.mode == "replay" and not any(model_dir(model).glob("*.json")):
         print(
             f"Нет записанных ответов для модели {model} ({model_dir(model)}).\n"
             f"Запишите их: make record",
@@ -83,16 +97,18 @@ def main(argv: list[str] | None = None) -> int:
             if not path.exists():
                 errors[doc_id] = f"нет записанного ответа {path.name}; запишите: make record"
                 continue
-            client: LLMClient = ScriptedClient(
-                json.loads(path.read_text(encoding="utf-8"))["responses"]
-            )
+            try:
+                client: LLMClient = ScriptedClient(load_responses(path))
+            except ValueError as e:
+                errors[doc_id] = str(e)
+                continue
         else:
             client = OllamaClient(model)
             if args.mode == "record":
                 client = recorder = RecordingClient(client)
         try:
             extraction = extract(text, client)
-        except AssertionError:
+        except ScriptExhaustedError:
             errors[doc_id] = (
                 "ошибка воспроизведения: пайплайн просит больше ответов, чем записано; "
                 "перезапишите: make record"
@@ -101,6 +117,12 @@ def main(argv: list[str] | None = None) -> int:
         except LLMUnavailableError as e:
             print(f"{e}\nЗапустите: ollama serve && ollama pull {model}", file=sys.stderr)
             return EXIT_LLM_UNAVAILABLE
+        if args.mode == "replay" and client.remaining:
+            errors[doc_id] = (
+                f"ошибка воспроизведения: осталось {client.remaining} неиспользованных "
+                "записанных ответов; перезапишите: make record"
+            )
+            continue
         results[doc_id] = extraction.result.model_dump(mode="json")
         if recorder is not None:
             recorded[doc_id] = recorder.responses
@@ -141,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
         + "\n",
         encoding="utf-8",
     )
+    if errors:
+        print(f"Ошибок воспроизведения: {len(errors)}", file=sys.stderr)
+        return 1
     return 0
 
 

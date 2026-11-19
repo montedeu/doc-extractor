@@ -94,3 +94,16 @@ def test_report_lists_hallucinations_and_misses_separately():
     assert row.split()[1:5] == ["0", "1", "1", "0"]
     total = next(l for l in text.splitlines() if l.startswith("ИТОГО"))
     assert total.split()[1:5] == ["14", "1", "1", "0"]  # 16 скалярных исходов, 2 из них не «верно»
+
+
+def test_non_numeric_amount_is_wrong_not_crash():
+    assert compare_field("total_amount", "abc", 10) == "wrong"
+    assert compare_field("total_amount", float("nan"), 10) == "wrong"
+    assert compare_field("total_amount", 2.675, 2.68) == "correct"
+
+
+def test_order_denominator_counts_only_docs_with_two_pairs():
+    A = item("Альфа")
+    r = run(doc(line_items=[A]), gold(line_items=[A]))
+    assert (r.order_ok, r.order_total) == (0, 0)
+    assert "0 из 0 документов с ≥2 позициями" in format_report(r)

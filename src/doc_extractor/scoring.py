@@ -1,6 +1,7 @@
 """Сравнение результатов с эталонами: исходы полей, порядок позиций, предупреждения."""
 
 import re
+from decimal import Decimal, InvalidOperation
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Literal
@@ -35,9 +36,13 @@ def normalize_name(value: str) -> str:
     return " ".join(s.split())
 
 
+def _cents(x) -> Decimal:
+    return Decimal(str(x)).quantize(Decimal("0.01"))
+
+
 def _equal(field_name: str, pred, gold) -> bool:
     if field_name in _AMOUNT_FIELDS:
-        return round(float(pred), 2) == round(float(gold), 2)
+        return _cents(pred) == _cents(gold)
     if field_name in _NAME_FIELDS:
         return normalize_name(str(pred)) == normalize_name(str(gold))
     return str(pred).strip() == str(gold).strip()
@@ -52,7 +57,10 @@ def compare_field(field: str, pred, gold) -> Outcome:
         return "hallucination"
     if pred is None:
         return "miss"
-    return "correct" if _equal(field, pred, gold) else "wrong"
+    try:
+        return "correct" if _equal(field, pred, gold) else "wrong"
+    except (ValueError, InvalidOperation):
+        return "wrong"
 
 
 @dataclass
@@ -123,8 +131,9 @@ def evaluate(results: dict[str, dict], golds: dict[str, dict]) -> Report:
 
         positions = [i for _, _, i in pairs]  # пары идут в порядке эталона
         order_ok = positions == sorted(positions)
-        report.order_total += 1
-        report.order_ok += order_ok
+        if len(pairs) >= 2:
+            report.order_total += 1
+            report.order_ok += order_ok
 
         warnings_ok = bool(gold.get("expect_warnings")) == bool(res.get("warnings"))
         report.warnings_total += 1
@@ -160,7 +169,7 @@ def format_report(report: Report) -> str:
     name, ok, h, m, w, acc = total_row
     lines.append(f"{name:<{width}}  {ok:>6}  {h:>12}  {m:>8}  {w:>7}  {acc:>8.0%}")
     lines.append("")
-    lines.append(f"Порядок позиций совпал: {report.order_ok} из {report.order_total} документов")
+    lines.append(f"Порядок: {report.order_ok} из {report.order_total} документов с ≥2 позициями")
     lines.append(
         f"Предупреждения совпали с ожиданием: {report.warnings_ok} из {report.warnings_total} документов"
     )
