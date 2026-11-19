@@ -39,7 +39,11 @@ def test_valid_answer_becomes_result():
     for key, value in VALID.items():
         assert dumped[key] == value
     assert dumped["doc_date"] == "2026-11-12"
-    assert dumped["field_confidence"] == {}
+    assert dumped["field_confidence"] == {
+        "doc_type": 1.0, "supplier_name": 1.0, "supplier_bin": 0.5, "doc_number": 1.0,
+        "doc_date": 1.0, "currency": 1.0, "total_amount": 1.0, "vat_amount": 1.0,
+        "line_items": 1.0,
+    }
     assert dumped["warnings"] == ["bin_checksum_failed: supplier_bin=170340021554"]
     assert ex.validation_failed is False
     assert len(client.calls) == 1
