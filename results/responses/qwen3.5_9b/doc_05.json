@@ -1,0 +1,7 @@
+{
+  "model": "qwen3.5:9b",
+  "recorded_at": "2026-11-19T11:49:14Z",
+  "responses": [
+    "{\n  \"doc_type\": \"act\",\n  \"supplier_name\": \"ТОО \\\"КлинСервис Астана\\\"\",\n  \"supplier_bin\": \"200540028712\",\n  \"doc_number\": \"47\",\n  \"doc_date\": \"2026-10-28\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 350000.0,\n  \"vat_amount\": 48275.86,\n  \"line_items\": [\n    {\n      \"name\": \"Уборка офисных помещений (октябрь 2026)\",\n      \"qty\": 1,\n      \"price\": 280000.0\n    },\n    {\n      \"name\": \"Мойка окон\",\n      \"qty\": 2,\n      \"price\": 35000.0\n    }\n  ]\n}"
+  ]
+}

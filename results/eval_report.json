@@ -1,0 +1,135 @@
+{
+  "model": "qwen3.5:9b",
+  "mode": "replay",
+  "outcomes": {
+    "doc_type": {
+      "correct": 10
+    },
+    "supplier_name": {
+      "correct": 9,
+      "wrong": 1
+    },
+    "supplier_bin": {
+      "correct": 8,
+      "miss": 2
+    },
+    "doc_number": {
+      "correct": 10
+    },
+    "doc_date": {
+      "correct": 10
+    },
+    "currency": {
+      "correct": 10
+    },
+    "total_amount": {
+      "correct": 9,
+      "wrong": 1
+    },
+    "vat_amount": {
+      "correct": 7,
+      "miss": 3
+    },
+    "line_items.name": {
+      "correct": 14,
+      "miss": 2,
+      "hallucination": 2
+    },
+    "line_items.qty": {
+      "correct": 14,
+      "miss": 2
+    },
+    "line_items.price": {
+      "correct": 14,
+      "miss": 2
+    }
+  },
+  "accuracy": {
+    "doc_type": 1.0,
+    "supplier_name": 0.9,
+    "supplier_bin": 0.8,
+    "doc_number": 1.0,
+    "doc_date": 1.0,
+    "currency": 1.0,
+    "total_amount": 0.9,
+    "vat_amount": 0.7,
+    "line_items.name": 0.7777777777777778,
+    "line_items.qty": 0.875,
+    "line_items.price": 0.875
+  },
+  "order_ok": 10,
+  "order_total": 10,
+  "warnings_ok": 6,
+  "warnings_total": 10,
+  "per_doc": {
+    "doc_01": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": false
+    },
+    "doc_02": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": true
+    },
+    "doc_03": {
+      "issues": [
+        "supplier_bin: miss (модель None, эталон '210640900180')",
+        "vat_amount: miss (модель None, эталон 0)",
+        "line_items.name: miss [Қызмет көрсету / Оказание услуг]",
+        "line_items.qty: miss [Қызмет көрсету / Оказание услуг]",
+        "line_items.price: miss [Қызмет көрсету / Оказание услуг]",
+        "line_items.name: hallucination [Оказание услуг]"
+      ],
+      "order_ok": true,
+      "warnings_ok": false
+    },
+    "doc_04": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": true
+    },
+    "doc_05": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": true
+    },
+    "doc_06": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": false
+    },
+    "doc_07": {
+      "issues": [
+        "supplier_name: wrong (модель 'Береке Принт', эталон 'ТОО \"Береке Принт\"')",
+        "supplier_bin: miss (модель None, эталон '150940016484')"
+      ],
+      "order_ok": true,
+      "warnings_ok": false
+    },
+    "doc_08": {
+      "issues": [
+        "total_amount: wrong (модель 380000.0, эталон 360000)",
+        "vat_amount: miss (модель None, эталон 0)",
+        "line_items.name: miss [Тұқым (бидай) / Семена пшеницы]",
+        "line_items.qty: miss [Тұқым (бидай) / Семена пшеницы]",
+        "line_items.price: miss [Тұқым (бидай) / Семена пшеницы]",
+        "line_items.name: hallucination [Семена пшеницы]"
+      ],
+      "order_ok": true,
+      "warnings_ok": true
+    },
+    "doc_09": {
+      "issues": [],
+      "order_ok": true,
+      "warnings_ok": true
+    },
+    "doc_10": {
+      "issues": [
+        "vat_amount: miss (модель None, эталон 0)"
+      ],
+      "order_ok": true,
+      "warnings_ok": true
+    }
+  }
+}

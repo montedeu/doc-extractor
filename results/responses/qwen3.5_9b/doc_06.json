@@ -1,0 +1,7 @@
+{
+  "model": "qwen3.5:9b",
+  "recorded_at": "2026-11-19T11:49:14Z",
+  "responses": [
+    "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ТОО \\\"Кайрат Электрикс\\\"\",\n  \"supplier_bin\": \"180540021709\",\n  \"doc_number\": \"0587\",\n  \"doc_date\": \"2026-11-10\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 148944,\n  \"vat_amount\": 20544,\n  \"line_items\": [\n    {\n      \"name\": \"Кабель ВВГнг 3x2.5\",\n      \"qty\": 200,\n      \"price\": 450\n    },\n    {\n      \"name\": \"Автомат ABB S201 C16\",\n      \"qty\": 12,\n      \"price\": 3200\n    }\n  ]\n}"
+  ]
+}
