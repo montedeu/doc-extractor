@@ -1,49 +1,44 @@
 поле               верно  галлюцинации  пропуски  неверно  точность
 -------------------------------------------------------------------
-doc_type              10             0         0        0      100%
-supplier_name          9             0         0        1       90%
-supplier_bin           8             0         2        0       80%
+doc_type               9             0         0        1       90%
+supplier_name          9             0         1        0       90%
+supplier_bin          10             0         0        0      100%
 doc_number            10             0         0        0      100%
 doc_date              10             0         0        0      100%
 currency              10             0         0        0      100%
-total_amount           9             0         0        1       90%
-vat_amount             7             0         3        0       70%
+total_amount          10             0         0        0      100%
+vat_amount            10             0         0        0      100%
 line_items.name       14             2         2        0       78%
 line_items.qty        14             0         2        0       88%
 line_items.price      14             0         2        0       88%
 -------------------------------------------------------------------
-ИТОГО                115             2        11        2       88%
+ИТОГО                120             2         7        1       92%
 
-Порядок: 7 из 7 документов с ≥2 позициями
+Порядок: 6 из 6 документов с ≥2 позициями
 Предупреждения совпали с ожиданием: 6 из 10 документов
 
 По документам (расхождения):
   doc_01: 
     - предупреждения не совпали с ожиданием
-  doc_02: всё верно
+  doc_02: 
+    - supplier_name: miss (модель None, эталон 'Digital Solutions')
+    - line_items.name: miss [Разработка сайта]
+    - line_items.qty: miss [Разработка сайта]
+    - line_items.price: miss [Разработка сайта]
+    - line_items.name: miss [Техподдержка, в месяц]
+    - line_items.qty: miss [Техподдержка, в месяц]
+    - line_items.price: miss [Техподдержка, в месяц]
+    - line_items.name: hallucination [Разработка сайта — 450 000 тг]
+    - line_items.name: hallucination [Техподдержка, в месяц — 60 000 тг]
   doc_03: 
-    - supplier_bin: miss (модель None, эталон '210640900180')
-    - vat_amount: miss (модель None, эталон 0)
-    - line_items.name: miss [Қызмет көрсету / Оказание услуг]
-    - line_items.qty: miss [Қызмет көрсету / Оказание услуг]
-    - line_items.price: miss [Қызмет көрсету / Оказание услуг]
-    - line_items.name: hallucination [Оказание услуг]
+    - doc_type: wrong (модель 'act', эталон 'invoice')
     - предупреждения не совпали с ожиданием
   doc_04: всё верно
   doc_05: всё верно
   doc_06: 
     - предупреждения не совпали с ожиданием
   doc_07: 
-    - supplier_name: wrong (модель 'Береке Принт', эталон 'ТОО "Береке Принт"')
-    - supplier_bin: miss (модель None, эталон '150940016484')
     - предупреждения не совпали с ожиданием
-  doc_08: 
-    - total_amount: wrong (модель 380000.0, эталон 360000)
-    - vat_amount: miss (модель None, эталон 0)
-    - line_items.name: miss [Тұқым (бидай) / Семена пшеницы]
-    - line_items.qty: miss [Тұқым (бидай) / Семена пшеницы]
-    - line_items.price: miss [Тұқым (бидай) / Семена пшеницы]
-    - line_items.name: hallucination [Семена пшеницы]
+  doc_08: всё верно
   doc_09: всё верно
-  doc_10: 
-    - vat_amount: miss (модель None, эталон 0)
+  doc_10: всё верно

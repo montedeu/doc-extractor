@@ -1,6 +1,6 @@
 {
   "model": "qwen3.5:9b",
-  "recorded_at": "2026-11-19T11:49:14Z",
+  "recorded_at": "2026-11-19T12:17:56Z",
   "responses": [
     "{\n  \"doc_type\": \"unknown\",\n  \"supplier_name\": null,\n  \"supplier_bin\": null,\n  \"doc_number\": null,\n  \"doc_date\": null,\n  \"currency\": null,\n  \"total_amount\": null,\n  \"vat_amount\": null,\n  \"line_items\": []\n}"
   ]

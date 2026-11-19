@@ -104,6 +104,16 @@ def test_prompt_has_no_test_set_examples():
                 assert line not in SYSTEM_PROMPT
 
 
+def test_prompt_has_spec_rules():
+    assert "Если название поставщика двуязычное, бери русский вариант" in SYSTEM_PROMPT
+    assert "без НДС" in SYSTEM_PROMPT
+    assert "vat_amount = 0" in SYSTEM_PROMPT
+    assert "l, I вместо 1" in SYSTEM_PROMPT
+    assert "O, О вместо 0" in SYSTEM_PROMPT
+    assert "организационно-правовой" in SYSTEM_PROMPT and "ЖШС → ТОО" in SYSTEM_PROMPT
+    assert "целиком" in SYSTEM_PROMPT
+
+
 def test_markdown_fence_is_stripped():
     client = ScriptedClient(["```json\n" + VALID_JSON + "\n```"])
     ex = extract(TEXT, client)
