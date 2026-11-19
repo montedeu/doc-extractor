@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Literal
 
-from doc_extractor.normalize import DocFacts, name_core, normalize_string
+from doc_extractor.normalize import DocFacts, name_core, name_core_text, normalize_string
 from doc_extractor.schema import ModelAnswer
 
 FieldStatus = Literal["ok", "ocr_corrected", "warned"]
@@ -26,7 +26,9 @@ _CURRENCY = {
 
 
 _TOTALS_LABEL = re.compile(
-    r"(?:итого|всего)(?: к оплате| без ндс| с ндс)?|к оплате|(?:ндс|ққс|барлығы)(?: .*)?"
+    r"(?:(?:итого|всего)(?: по документу| к оплате| (?:без|с) ндс)?|к оплате|в том числе ндс"
+    r"|ндс|ққс|барлығы(?: төлеуге)?|жиыны|жалпы сомасы)"
+    r"(?: [\d%]+)*(?: тенге| тг)?"
 )
 _PARTS_SPLIT = re.compile(r"\s+/\s+")
 
@@ -67,17 +69,19 @@ def _doc_number_status(value: str, facts: DocFacts) -> FieldStatus | None:
 
 def _name_in_text(value: str, text_core: str) -> bool:
     core = name_core(value)
-    return bool(core) and core in text_core
+    if not core.strip("/ "):
+        return False
+    return bool(re.search(rf"(?<!\w){re.escape(core)}(?!\w)", text_core))
 
 
 def _item_name_ok(name: str, text_core: str) -> bool:
-    core = name_core(name).rstrip(" :.")
-    if not core or _TOTALS_LABEL.fullmatch(core):
+    core = name_core(name)
+    if not core.strip("/ ") or _TOTALS_LABEL.fullmatch(core):
         return False
     if _name_in_text(name, text_core):
         return True
-    parts = _PARTS_SPLIT.split(name)  # «Қазақша / Русский»: каждая часть отдельно
-    return len(parts) > 1 and all(_name_in_text(p, text_core) for p in parts if p.strip())
+    parts = [p for p in _PARTS_SPLIT.split(name) if name_core(p)]  # «Қазақша / Русский»
+    return len(parts) > 1 and all(_name_in_text(p, text_core) for p in parts)
 
 
 def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
@@ -121,7 +125,7 @@ def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
         check("doc_number", a.doc_number, _doc_number_status(a.doc_number, facts),
               lambda: setattr(a, "doc_number", None))
 
-    text_core = name_core(facts.text)
+    text_core = name_core_text(facts.text)
 
     if a.supplier_name is not None:
         check("supplier_name", a.supplier_name,
@@ -129,16 +133,17 @@ def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
               lambda: setattr(a, "supplier_name", None))
 
     kept = []
-    for i, item in enumerate(a.line_items):
-        if not _item_name_ok(item.name, text_core):
+    for item in a.line_items:
+        if _item_name_ok(item.name, text_core):
+            kept.append(item)
+        else:
             warnings.append(f"line_item_dropped: {item.name}")
-            continue
-        kept.append(item)
+    a.line_items = kept
+
+    for i, item in enumerate(a.line_items):  # индексы по итоговому списку
         for f in ("qty", "price"):
             v = getattr(item, f)
             check(f"line_items[{i}].{f}", v, _number_status(v, facts),
                   lambda item=item, f=f: setattr(item, f, None))
-
-    a.line_items = kept
 
     return Grounded(a, warnings, status)

@@ -92,12 +92,12 @@ def test_bilingual_item_with_invented_part_dropped():
     assert any(w.startswith("line_item_dropped") for w in r.warnings)
 
 
-def test_item_warning_indexes_follow_original_list():
+def test_item_warning_indexes_follow_final_list():
     g = gold("01")
     a, c = g["line_items"]
     c = dict(c, qty=7)  # 7 нет в тексте
     r = run(text_of("01"), g | {"line_items": [items("Доставка")[0], a, c]})
-    assert "not_in_text: line_items[2].qty=7" in r.warnings
+    assert "not_in_text: line_items[1].qty=7" in r.warnings
     assert r.line_items[1].qty is None
 
 
@@ -105,3 +105,42 @@ def test_name_core():
     assert name_core('T0O "Бepeкe Пpинт"') == "береке принт"
     assert name_core("ТОО") == ""
     assert name_core("«Алтын Дала Агро»") == "алтын дала агро"
+
+
+def test_supplier_inside_other_word_not_grounded():
+    r = run("Счёт из Казахстан", gold("01") | {"supplier_name": "ТОО Ан"})
+    assert r.supplier_name is None
+
+
+def test_item_inside_other_word_dropped():
+    r = run("Мукачево 5 шт", gold("01") | {"line_items": items("Мука")})
+    assert r.line_items == []
+
+
+def test_item_with_vat_prefix_not_a_totals_row():
+    text = "Услуги\nНДС на импорт услуги 100\n"
+    r = run(text, gold("01") | {"line_items": items("НДС на импорт услуги")})
+    assert len(r.line_items) == 1
+
+
+def test_totals_forms_dropped():
+    text = "Итого по документу 5 000\nНДС 16% 800\nВсего к оплате: 5 800 тенге\n"
+    names = ["Итого по документу", "НДС 16%", "Всего к оплате: 5 800 тенге", "Жиыны"]
+    r = run(text, gold("01") | {"line_items": items(*names)})
+    assert r.line_items == []
+
+
+def test_punctuation_and_yo_ignored():
+    text = "Бумага А4 80г/м2\nЁлка новогодняя\n"
+    r = run(text, gold("01") | {"line_items": items("Бумага А4, 80г/м2", "Елка новогодняя")})
+    assert len(r.line_items) == 2
+
+
+def test_opf_in_text_does_not_glue_neighbours():
+    r = run("Ромашка ИП Иванов", gold("01") | {"supplier_name": "Ромашка Иванов"})
+    assert r.supplier_name is None
+
+
+def test_slash_only_item_dropped():
+    r = run(text_of("01"), gold("01") | {"line_items": items(" / ")})
+    assert r.line_items == []
