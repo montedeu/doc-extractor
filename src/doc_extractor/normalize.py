@@ -177,3 +177,32 @@ def analyze(text: str) -> DocFacts:
         raw_numbers=_parse_numbers(text) | word_nums,
         amounts_in_words=words,
     )
+
+
+_NAME_QUOTES = str.maketrans({c: " " for c in "«»\"“”„‟'"})
+_ZERO_BETWEEN_LETTERS = re.compile(r"(?<=[^\W\d_])0(?=[^\W\d_])")
+_NAME_PUNCT = re.compile(r"[,;:.]")
+_SLASH = re.compile(r"\s*/\s*")
+# после fold_homoglyphs + casefold: ТОО/TOO/T0O -> тоо, LLP -> llр, LLC -> llс
+_OPF = re.compile(r"(?<!\w)(?:ооо|оао|зао|ао|ип|тоо|жшс|llр|llс)(?!\w)")
+
+
+def _core(name: str, opf_sub: str) -> str:
+    s = name.translate(_NAME_QUOTES)
+    prev = None
+    while prev != s:  # «T00»: lookaround не видит соседний 0, нужен повтор
+        prev = s
+        s = _ZERO_BETWEEN_LETTERS.sub("О", s)
+    s = fold_homoglyphs(s).casefold().replace("ё", "е")
+    s = _NAME_PUNCT.sub(" ", _OPF.sub(f" {opf_sub} ", s))
+    return _SLASH.sub("/", " ".join(s.split()))
+
+
+def name_core(name: str) -> str:
+    """Название без ОПФ и кавычек, для сравнения; правила как у scoring.normalize_name."""
+    return _core(name, "").strip()
+
+
+def name_core_text(text: str) -> str:
+    """То же для текста документа; ОПФ заменяется на «|», чтобы не склеивать соседей."""
+    return _core(text, "|")
