@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
+from doc_extractor.conflicts import find_conflicts
 from doc_extractor.grounding import ground
 from doc_extractor.llm import LLMClient
 from doc_extractor.normalize import analyze
@@ -45,10 +46,11 @@ def extract(text: str, client: LLMClient) -> Extraction:
         short = " ".join(error.split())[:300]
         return Extraction(empty_result([f"validation_failed: {short}"]), True)
 
-    grounded = ground(answer, analyze(text))
+    facts = analyze(text)
+    grounded = ground(answer, facts)
     result = ExtractionResult(
         **grounded.answer.model_dump(),
         field_confidence={},
-        warnings=grounded.warnings,
+        warnings=grounded.warnings + find_conflicts(facts),
     )
     return Extraction(result, False)

@@ -240,3 +240,10 @@ def name_core(name: str) -> str:
 def name_core_text(text: str) -> str:
     """То же для текста документа; ОПФ заменяется на «|», чтобы не склеивать соседей."""
     return _core(text, "|")
+
+
+# Публичные имена для conflicts.py
+NUMBER_RE = _NUMBER
+SPACES_RE = _SPACES
+number_variants = _variants
+parse_dates = _parse_dates
