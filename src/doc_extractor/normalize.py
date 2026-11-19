@@ -190,6 +190,7 @@ class DocFacts:
     raw_numbers: set[Decimal]  # без исправления OCR: отличает ocr_corrected от ok
     amounts_in_words: list[int] = field(default_factory=list)
     bin_candidates: list[BinCandidate] = field(default_factory=list)
+    lines: list[str] = field(default_factory=list)  # нормализованные строки текста
 
     def has_number(self, x: float) -> bool:
         return _quant(Decimal(str(x))) in self.numbers
@@ -210,6 +211,7 @@ def analyze(text: str) -> DocFacts:
         raw_numbers=_parse_numbers(text) | word_nums,
         amounts_in_words=words,
         bin_candidates=_bin_candidates(text),
+        lines=[normalize_string(line) for line in text.splitlines()],
     )
 
 

@@ -74,3 +74,9 @@ def test_latin_homoglyphs():
 
 def test_line_break_inside_phrase():
     assert find_amounts_in_words("Пятьсот\nтысяч тенге") == [500000]
+
+
+def test_tenge_sign_and_eur_markers():
+    assert find_amounts_in_words("Сто сорок тысяч ₸") == [140000]
+    assert find_amounts_in_words("сто EUR") == [100]
+    assert find_amounts_in_words("сто €") == [100]
