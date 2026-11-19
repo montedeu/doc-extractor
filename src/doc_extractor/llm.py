@@ -73,4 +73,8 @@ class OllamaClient:
             ) from e
         except (httpx.HTTPError, ConnectionError) as e:
             raise LLMUnavailableError(f"Ollama недоступна: {e}") from e
-        return response["message"]["content"] or ""
+        try:
+            content = response["message"]["content"]
+        except (KeyError, TypeError):
+            return ""
+        return content or ""

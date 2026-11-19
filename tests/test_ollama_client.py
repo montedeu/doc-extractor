@@ -37,6 +37,12 @@ def test_none_content_becomes_empty_string(monkeypatch):
     assert OllamaClient("m").complete(MSGS) == ""
 
 
+@pytest.mark.parametrize("response", [{"message": None}, {}])
+def test_missing_or_none_message_becomes_empty_string(monkeypatch, response):
+    patch_client(monkeypatch, lambda **kw: response)
+    assert OllamaClient("m").complete(MSGS) == ""
+
+
 @pytest.mark.parametrize("exc", [
     ollama.ResponseError("model 'm' not found", 404),
     ollama.ResponseError("boom", 500),

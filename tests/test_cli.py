@@ -141,7 +141,9 @@ def test_subprocess_empty_stdin_exits_0():
     proc = subprocess.run(
         [sys.executable, "-m", "doc_extractor", "extract", "-"],
         input=b"", capture_output=True, timeout=60,
-        env={**os.environ, "PYTHONPATH": str(ROOT / "src")}, cwd=ROOT,
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(
+        p for p in (str(ROOT / "src"), os.environ.get("PYTHONPATH")) if p)},
+        cwd=ROOT,
     )
     assert proc.returncode == 0
     data = json.loads(proc.stdout.decode("utf-8"))
@@ -196,6 +198,12 @@ def test_stdin_bom_and_newlines_normalized(raw, expected):
     stdin = io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8")
     assert run(["extract", "-"], client, stdin_text=stdin)[0] == 0
     assert client.calls[0][-1]["content"] == expected
+
+
+def test_string_stdin_newlines_normalized():
+    client = ScriptedClient([VALID_JSON])
+    assert run(["extract", "-"], client, stdin_text=io.StringIO("a\r\nb"))[0] == 0
+    assert client.calls[0][-1]["content"] == "a\nb"
 
 
 def test_cyrillic_is_not_escaped_in_stdout():

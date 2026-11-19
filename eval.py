@@ -20,7 +20,7 @@ from doc_extractor.llm import (
     model_from_env,
 )
 from doc_extractor.pipeline import extract
-from doc_extractor.prompt import SYSTEM_PROMPT
+from doc_extractor import prompt as prompt_module
 from doc_extractor.scoring import evaluate, format_report
 
 ROOT = Path(__file__).parent
@@ -32,7 +32,9 @@ REPORT_PATH = ROOT / "results" / "eval_report.json"
 EXIT_NO_RESPONSES = 1
 EXIT_LLM_UNAVAILABLE = 3
 
-PROMPT_SHA = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+# версия промпта: хеш всего модуля prompt.py (системный промпт и шаблон повтора)
+PROMPT_SHA = hashlib.sha256(Path(prompt_module.__file__).read_bytes()).hexdigest()
+PROMPT_MISSING_WARNING = "записанные ответы без отметки версии промпта — актуальность не проверить"
 PROMPT_WARNING = "записанные ответы сняты на другой версии промпта — make record"
 
 
@@ -97,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     results: dict[str, dict] = {}
     errors: dict[str, str] = {}
     recorded: dict[str, list[str]] = {}
+    prompt_missing = False
     prompt_stale = False
     for doc_id in golds:
         text = (DOCS_DIR / f"{doc_id}.txt").read_text(encoding="utf-8-sig")
@@ -111,7 +114,10 @@ def main(argv: list[str] | None = None) -> int:
             except ValueError as e:
                 errors[doc_id] = str(e)
                 continue
-            prompt_stale = prompt_stale or recorded_sha != PROMPT_SHA
+            if recorded_sha is None:
+                prompt_missing = True
+            elif recorded_sha != PROMPT_SHA:
+                prompt_stale = True
             client: LLMClient = ScriptedClient(responses)
         else:
             client = OllamaClient(model)
@@ -154,6 +160,8 @@ def main(argv: list[str] | None = None) -> int:
                 json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
             )
 
+    if prompt_missing:
+        print(PROMPT_MISSING_WARNING, file=sys.stderr)
     if prompt_stale:
         print(PROMPT_WARNING, file=sys.stderr)
 

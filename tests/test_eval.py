@@ -1,14 +1,16 @@
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
 import eval as eval_script
+from doc_extractor import prompt as prompt_module
 from doc_extractor.llm import LLMUnavailableError, ScriptExhaustedError
-from doc_extractor.prompt import SYSTEM_PROMPT
 
-PROMPT_SHA = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+PROMPT_SHA = hashlib.sha256(Path(prompt_module.__file__).read_bytes()).hexdigest()
 PROMPT_WARNING = "записанные ответы сняты на другой версии промпта — make record"
+PROMPT_MISSING_WARNING = "записанные ответы без отметки версии промпта — актуальность не проверить"
 
 VALID = {
     "doc_type": "invoice", "supplier_name": None, "supplier_bin": None,
@@ -132,7 +134,13 @@ def test_record_writes_prompt_sha256(env, monkeypatch):
     assert run("--mode", "record") == 0
     path = eval_script.model_dir("m:1") / "doc_01.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["prompt_sha256"] == hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()
+    assert data["prompt_sha256"] == PROMPT_SHA
+
+
+def test_prompt_sha_covers_whole_prompt_module():
+    # хеш берётся от файла prompt.py, а не только от SYSTEM_PROMPT
+    assert PROMPT_SHA == eval_script.PROMPT_SHA
+    assert len(PROMPT_SHA) == 64
 
 
 def test_replay_warns_on_prompt_mismatch_but_exits_0(env, capsys):
@@ -141,17 +149,21 @@ def test_replay_warns_on_prompt_mismatch_but_exits_0(env, capsys):
     assert run() == 0
     err = capsys.readouterr().err
     assert err.count(PROMPT_WARNING) == 1
+    assert PROMPT_MISSING_WARNING not in err
 
 
-def test_replay_warns_when_prompt_sha_missing(env, capsys):
+def test_replay_warns_when_prompt_sha_missing_but_exits_0(env, capsys):
     for doc in ("doc_01", "doc_02"):
         write_payload(doc, {"responses": [json.dumps(VALID)]})
     assert run() == 0
-    assert PROMPT_WARNING in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert err.count(PROMPT_MISSING_WARNING) == 1
+    assert PROMPT_WARNING not in err
 
 
 def test_replay_no_warning_on_matching_prompt(env, capsys):
     for doc in ("doc_01", "doc_02"):
         write_response(env, doc, [json.dumps(VALID)])
     assert run() == 0
-    assert PROMPT_WARNING not in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert PROMPT_WARNING not in err and PROMPT_MISSING_WARNING not in err
