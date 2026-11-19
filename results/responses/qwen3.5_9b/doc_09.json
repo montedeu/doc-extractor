@@ -1,6 +1,7 @@
 {
   "model": "qwen3.5:9b",
-  "recorded_at": "2026-11-19T12:17:56Z",
+  "recorded_at": "2026-11-19T13:04:06Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
   "responses": [
     "{\n  \"doc_type\": \"unknown\",\n  \"supplier_name\": null,\n  \"supplier_bin\": null,\n  \"doc_number\": null,\n  \"doc_date\": null,\n  \"currency\": null,\n  \"total_amount\": null,\n  \"vat_amount\": null,\n  \"line_items\": []\n}"
   ]

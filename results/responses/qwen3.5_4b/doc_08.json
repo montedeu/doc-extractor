@@ -1,0 +1,8 @@
+{
+  "model": "qwen3.5:4b",
+  "recorded_at": "2026-11-19T13:13:41Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
+  "responses": [
+    "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ЖШС «Алтын Дала Агро»\",\n  \"supplier_bin\": null,\n  \"doc_number\": \"15-К\",\n  \"doc_date\": \"2026-11-15\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 360000,\n  \"vat_amount\": 0,\n  \"line_items\": [\n    {\n      \"name\": \"Тұқым (бидай) / Семена пшеницы\",\n      \"qty\": null,\n      \"price\": null\n    }\n  ]\n}"
+  ]
+}

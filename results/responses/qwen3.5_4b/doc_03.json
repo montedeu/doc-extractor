@@ -1,0 +1,8 @@
+{
+  "model": "qwen3.5:4b",
+  "recorded_at": "2026-11-19T13:13:41Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
+  "responses": [
+    "{\n  \"doc_type\": \"commercial_offer\",\n  \"supplier_name\": \"ТОО Кокжиек Курылыс\",\n  \"supplier_bin\": null,\n  \"doc_number\": \"AKT-09\",\n  \"doc_date\": \"2026-10-09\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 340000,\n  \"vat_amount\": 0,\n  \"line_items\": [\n    {\n      \"name\": \"Қызмет көрсету / Оказание услуг\",\n      \"qty\": 1,\n      \"price\": 340000\n    }\n  ]\n}"
+  ]
+}
