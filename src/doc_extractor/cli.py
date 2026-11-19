@@ -7,11 +7,17 @@ from doc_extractor.llm import LLMClient, LLMUnavailableError, OllamaClient, mode
 from doc_extractor.pipeline import extract
 
 USAGE = "usage: python -m doc_extractor extract <путь | ->"
+HELP_FLAGS = ("-h", "--help")
 
 EXIT_OK = 0
 EXIT_INPUT_ERROR = 1
 EXIT_VALIDATION_FAILED = 2
 EXIT_LLM_UNAVAILABLE = 3
+
+
+def _decode(data: bytes) -> str:
+    # utf-8-sig снимает BOM, если он есть
+    return data.decode("utf-8-sig")
 
 
 def main(
@@ -22,10 +28,16 @@ def main(
     stderr: TextIO | None = None,
 ) -> int:
     args = sys.argv[1:] if argv is None else argv
+    if stdout is None:
+        stdout = sys.stdout
+        if hasattr(stdout, "reconfigure"):
+            stdout.reconfigure(encoding="utf-8")
     stdin = sys.stdin if stdin is None else stdin
-    stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr
 
+    if args and args[0] in HELP_FLAGS:
+        print(USAGE, file=stdout)
+        return EXIT_OK
     if not args:
         print(USAGE, file=stderr)
         return EXIT_INPUT_ERROR
@@ -38,16 +50,26 @@ def main(
 
     source = args[1]
     if source == "-":
-        text = stdin.read()
+        buffer = getattr(stdin, "buffer", None)
+        try:
+            if buffer is not None:
+                text = _decode(buffer.read())
+            else:
+                text = stdin.read()
+        except UnicodeDecodeError:
+            print("Ввод на stdin не в кодировке UTF-8", file=stderr)
+            return EXIT_INPUT_ERROR
     else:
         try:
-            # utf-8-sig снимает BOM, если он есть
             text = Path(source).read_text(encoding="utf-8-sig")
         except UnicodeDecodeError:
             print(f"Файл не в кодировке UTF-8: {source}", file=stderr)
             return EXIT_INPUT_ERROR
         except OSError as e:
             print(f"Не могу прочитать файл {source}: {e.strerror}", file=stderr)
+            return EXIT_INPUT_ERROR
+        except ValueError as e:
+            print(f"Некорректный путь {source!r}: {e}", file=stderr)
             return EXIT_INPUT_ERROR
 
     if client is None:
@@ -57,8 +79,7 @@ def main(
     except LLMUnavailableError as e:
         model = getattr(client, "model", None) or model_from_env()
         print(
-            f"Ollama недоступна ({e}). "
-            f"Запустите: ollama serve && ollama pull {model}",
+            f"{e}\nЗапустите: ollama serve && ollama pull {model}",
             file=stderr,
         )
         return EXIT_LLM_UNAVAILABLE
