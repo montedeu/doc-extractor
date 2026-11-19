@@ -70,3 +70,32 @@ def test_no_line_items_means_no_line_items_key():
     r = run(text_of("04"), gold("04") | {"line_items": []})
     assert "line_items" not in r.field_confidence
     assert r.field_confidence["total_amount"] == 1.0
+
+
+def test_nullified_item_price_caps_line_items():
+    answer = gold("01") | {"line_items": [
+        {"name": "Бумага А4 80г/м2", "qty": 50, "price": 123457},
+        {"name": "Картридж HP 85A", "qty": 3, "price": 18500},
+    ]}
+    r = run(text_of("01"), answer)
+    assert r.line_items[0].price is None
+    assert r.field_confidence["line_items"] == 0.5
+
+
+def test_conflicting_totals_cap_total_amount():
+    r = run(text_of("06"), gold("06"))
+    assert r.total_amount == 148944
+    assert any(w.startswith("conflicting_totals") for w in r.warnings)
+    assert r.field_confidence["total_amount"] == 0.5
+
+
+def test_ocr_corrected_item_numbers_cap_line_items_at_0_7():
+    r = run(text_of("07"), gold("07"))
+    assert r.line_items[1].price == 4500
+    assert r.field_confidence["line_items"] == 0.7
+
+
+def test_zero_vat_without_vat_word_is_full_confidence():
+    r = run(text_of("08"), gold("08"))
+    assert r.vat_amount == 0
+    assert r.field_confidence["vat_amount"] == 1.0

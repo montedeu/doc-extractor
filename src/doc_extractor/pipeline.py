@@ -49,9 +49,10 @@ def extract(text: str, client: LLMClient) -> Extraction:
 
     facts = analyze(text)
     grounded = ground(answer, facts)
+    warnings = grounded.warnings + find_conflicts(facts)
     result = ExtractionResult(
         **grounded.answer.model_dump(),
-        field_confidence=field_confidence(grounded.answer, grounded.status),
-        warnings=grounded.warnings + find_conflicts(facts),
+        field_confidence=field_confidence(grounded.answer, grounded.status, warnings),
+        warnings=warnings,
     )
     return Extraction(result, False)
