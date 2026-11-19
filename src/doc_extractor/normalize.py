@@ -150,6 +150,38 @@ def _parse_dates(text: str) -> set[date]:
 
 
 @dataclass
+class BinCandidate:
+    digits: str  # 12 цифр после fix_ocr_digits
+    raw: str  # как в тексте
+    line: str  # строка документа целиком
+    ocr_fixed: bool  # raw != digits
+    start: int = 0  # позиция raw в строке
+    prev_lines: list[str] = field(default_factory=list)  # до 5 строк абзаца выше, ближайшая первой
+
+
+# 12 цифр/OCR-двойников; слева и справа любой символ, кроме буквы и цифры, или край строки.
+# Десятичная часть («…012.50») кандидата не делает.
+_BIN_TOKEN = re.compile(rf"(?<![^\W_])[{_OC}]{{12}}(?![^\W_])(?![.,]\d)")
+
+
+def _bin_candidates(text: str) -> list[BinCandidate]:
+    out: list[BinCandidate] = []
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        prev: list[str] = []
+        for x in reversed(lines[:idx]):
+            if not x.strip() or len(prev) == 5:
+                break
+            prev.append(x)
+        for m in _BIN_TOKEN.finditer(line):
+            raw = m.group(0)
+            digits = fix_ocr_digits(raw)
+            if digits.isascii() and digits.isdigit():
+                out.append(BinCandidate(digits, raw, line, raw != digits, m.start(), prev))
+    return out
+
+
+@dataclass
 class DocFacts:
     text: str
     folded: str
@@ -157,6 +189,7 @@ class DocFacts:
     dates: set[date]
     raw_numbers: set[Decimal]  # без исправления OCR: отличает ocr_corrected от ok
     amounts_in_words: list[int] = field(default_factory=list)
+    bin_candidates: list[BinCandidate] = field(default_factory=list)
 
     def has_number(self, x: float) -> bool:
         return _quant(Decimal(str(x))) in self.numbers
@@ -176,6 +209,7 @@ def analyze(text: str) -> DocFacts:
         dates=_parse_dates(normalize_string(text)),
         raw_numbers=_parse_numbers(text) | word_nums,
         amounts_in_words=words,
+        bin_candidates=_bin_candidates(text),
     )
 
 

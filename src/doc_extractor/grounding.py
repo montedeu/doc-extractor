@@ -4,7 +4,14 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Literal
 
-from doc_extractor.normalize import DocFacts, name_core, name_core_text, normalize_string
+from doc_extractor.bin_check import bin_checksum_ok
+from doc_extractor.normalize import (
+    BinCandidate,
+    DocFacts,
+    name_core,
+    name_core_text,
+    normalize_string,
+)
 from doc_extractor.schema import ModelAnswer
 
 FieldStatus = Literal["ok", "ocr_corrected", "warned"]
@@ -31,6 +38,108 @@ _TOTALS_LABEL = re.compile(
     r"(?: [\d%]+)*(?: тенге| тг)?"
 )
 _PARTS_SPLIT = re.compile(r"\s+/\s+")
+
+
+_NL = r"(?<![^\W\d_])"  # слева не буква
+_NR = r"(?![^\W\d_])"  # справа не буква
+# Тексты сравниваются после normalize_string: латинские B/b -> кириллическая «в», I остаётся.
+_BIN_ALT = r"(?:б[иіil1]н|в[іil1]n|бсн|вsn)"
+_IIN_ALT = r"(?:иин|iin|іін|жсн)"
+_BIN_LABEL = re.compile(rf"{_NL}{_BIN_ALT}{_NR}")
+_IIN_LABEL = re.compile(rf"{_NL}{_IIN_ALT}{_NR}")
+# «БИН/ИИН», «ИИН/БИН», «БИН (ИИН)»: тип по метке не решают, остаётся роль
+_COMBINED = re.compile(
+    rf"{_NL}(?:{_BIN_ALT}\s*[/(]\s*{_IIN_ALT}|{_IIN_ALT}\s*[/(]\s*{_BIN_ALT})\)?{_NR}"
+)
+_BUYER = re.compile(
+    rf"{_NL}(?:покупател\w{{0,3}}|заказчик\w{{0,3}}|плательщик\w{{0,3}}"
+    rf"|сатып\s+алушы\w{{0,3}}|тапсырыс\s+беруші\w{{0,3}}){_NR}"
+)
+_SUPPLIER = re.compile(
+    rf"{_NL}(?:исполнител\w{{0,3}}|поставщик\w{{0,3}}|продав\w{{0,4}}"
+    rf"|орындаушы\w{{0,3}}|жеткізуші\w{{0,3}}|сатушы\w{{0,3}}){_NR}"
+)
+_QUOTED = re.compile(r'«[^»]*»|"[^"]*"|“[^”]*”')
+
+
+def _mask(line: str) -> str:
+    """Названия в кавычках не содержат меток: гасим пробелами, длина сохраняется."""
+    return _QUOTED.sub(lambda m: " " * len(m.group(0)), line)
+
+
+def _last_pos(pat: re.Pattern, s: str) -> int:
+    ms = list(pat.finditer(s))
+    return ms[-1].start() if ms else -1
+
+
+def _role(left: str) -> str | None:
+    b, s = _last_pos(_BUYER, left), _last_pos(_SUPPLIER, left)
+    if b < 0 and s < 0:
+        return None
+    return "buyer" if b > s else "supplier"
+
+
+def _reject_reason(c: BinCandidate) -> str | None:
+    """Ближайшая метка слева от числа решает; без меток слева — вся строка."""
+    line = _mask(c.line)
+    end = c.start + len(c.raw)
+    left = _COMBINED.sub(" бин ", normalize_string(line[: c.start]))
+    right = normalize_string(line[end:])
+    whole = _COMBINED.sub(" бин ", normalize_string(line))
+    b, i = _last_pos(_BIN_LABEL, left), _last_pos(_IIN_LABEL, left)
+    if b >= 0 or i >= 0:
+        is_iin = i > b
+    else:
+        is_iin = bool(_IIN_LABEL.search(whole)) and not _BIN_LABEL.search(whole)
+    if is_iin:
+        return "ИИН"
+    role = _role(left)
+    if role is None:
+        # метка роли справа: «<БИН> — БИН покупателя»
+        rb, rs = _BUYER.search(right), _SUPPLIER.search(right)
+        if rb and (not rs or rb.start() < rs.start()):
+            role = "buyer"
+        elif rs:
+            role = "supplier"
+    if role is None:
+        for prev in c.prev_lines:
+            role = _role(normalize_string(_mask(prev)))
+            if role:
+                break
+    return "покупатель" if role == "buyer" else None
+
+
+def _rank(c: BinCandidate) -> int:
+    ok = bin_checksum_ok(c.digits)
+    if ok:
+        return 1 if c.ocr_fixed else 0
+    return 3 if c.ocr_fixed else 2
+
+
+def _bin_status(a: ModelAnswer, facts: DocFacts, warnings: list[str]) -> FieldStatus | None:
+    """None: значение обнулить (предупреждение уже добавлено)."""
+    v = a.supplier_bin
+    cands = [c for c in facts.bin_candidates if v in (c.digits, c.raw)]
+    if not cands:
+        warnings.append(f"not_in_text: supplier_bin={v}")
+        return None
+    reasons = [(c, _reject_reason(c)) for c in cands]
+    if any(r == "покупатель" for _, r in reasons):
+        warnings.append(f"bin_not_supplier: supplier_bin={v} (покупатель)")
+        return None
+    good = sorted((c for c, r in reasons if r is None), key=_rank)
+    if not good:
+        warnings.append(f"bin_not_supplier: supplier_bin={v} ({reasons[0][1]})")
+        return None
+    c = good[0]
+    if not bin_checksum_ok(c.digits):
+        warnings.append(f"bin_checksum_failed: supplier_bin={v}")
+        # OCR-правка разрешена только при сходящейся контрольной цифре
+        return None if c.ocr_fixed else "warned"
+    if c.ocr_fixed:
+        warnings.append(f"ocr_corrected: supplier_bin {c.raw} → {c.digits}")
+        return "ocr_corrected"
+    return "ok"
 
 
 @dataclass
@@ -139,6 +248,13 @@ def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
         else:
             warnings.append(f"line_item_dropped: {item.name}")
     a.line_items = kept
+
+    if a.supplier_bin is not None:
+        st = _bin_status(a, facts, warnings)
+        if st is None:
+            a.supplier_bin = None
+        else:
+            status["supplier_bin"] = st
 
     for i, item in enumerate(a.line_items):  # индексы по итоговому списку
         for f in ("qty", "price"):

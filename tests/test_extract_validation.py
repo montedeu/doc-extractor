@@ -40,7 +40,7 @@ def test_valid_answer_becomes_result():
         assert dumped[key] == value
     assert dumped["doc_date"] == "2026-11-12"
     assert dumped["field_confidence"] == {}
-    assert dumped["warnings"] == []
+    assert dumped["warnings"] == ["bin_checksum_failed: supplier_bin=170340021554"]
     assert ex.validation_failed is False
     assert len(client.calls) == 1
 
