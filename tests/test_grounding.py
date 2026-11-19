@@ -111,7 +111,7 @@ def test_number_formats_and_spaces():
     f = analyze("1 000 000 и 25 000 и 7 500 и 713.40 и 280 000,00")
     for x in (1000000, 25000, 7500, 713.4, 280000):
         assert f.has_number(x)
-    assert not f.has_number(1)
+    assert f.has_number(1)
     assert not f.has_number(0)
 
 
@@ -125,3 +125,55 @@ def test_normalize_helpers():
     assert fold_homoglyphs("AKT") == "АКТ"
     assert fix_ocr_digits("25 OOO") == "25 000"
     assert fix_ocr_digits("Оплата Olga") == "Оплата Olga"
+
+
+def test_dates_quotes_two_digit_year_kazakh_order():
+    from datetime import date
+    f = analyze('«12» ноября 2026; "13" ноября 2026; 05.11.26; 2026 жылғы 15 қараша; 2026 ж. 16 қараша')
+    assert {date(2026, 11, d) for d in (12, 13, 5, 15, 16)} <= f.dates
+
+
+def test_may_only_known_forms():
+    from datetime import date
+    assert date(2026, 5, 3) in analyze("3 мая 2026").dates
+    assert date(2026, 5, 3) in analyze("3 мамыр 2026").dates
+    assert date(2026, 5, 3) not in analyze("3 март 2026").dates
+    assert analyze("3 макулатура 2026").dates == set()
+
+
+def test_glued_number_and_parts_and_mixed_separators():
+    f = analyze("2 500 шт; 1.500,25 руб")
+    for x in (2500, 2, 500, 1500.25):
+        assert f.has_number(x)
+
+
+def test_ocr_only_inside_token_with_digit():
+    assert fix_ocr_digits("ООО 123") == "ООО 123"
+    assert fix_ocr_digits("ООО Ромашка 5 ООО Ромашка") == "ООО Ромашка 5 ООО Ромашка"
+    assert fix_ocr_digits("2l064090Ol80 25OOO 5OO") == "210640900180 25000 500"
+    assert not analyze("ООО 123").has_number(0)
+    assert analyze("ООО 123").has_number(123)
+    assert analyze("Визитки 25 OOO").has_number(25000)
+
+
+def test_vat_price_without_vat_line_does_not_confirm_zero():
+    text = "Счёт № 5 от 12.11.2026\nЦена без НДС: 100 000\nИтого: 100 000 тенге\n"
+    ans = gold("01") | {"vat_amount": 0, "total_amount": 100000}
+    assert run(text, ans).vat_amount is None
+    assert run(text + "Освобождено от НДС\n", ans).vat_amount == 0
+
+
+def test_vat_zero_doc_08_and_10():
+    assert run(text_of("08"), gold("08")).vat_amount == 0
+    assert run(text_of("10"), gold("10")).vat_amount == 0
+
+
+def test_currency_markers_are_whole_words():
+    text = "Счёт № 5 от 12.11.2026\nЕвро-поддон европейский 5 шт\nИтого: 100\n"
+    ans = gold("01") | {"currency": "EUR", "total_amount": 100}
+    assert run(text, ans).currency is None
+    assert run(text + "100 EUR\n", ans).currency == "EUR"
+
+
+def test_lowercase_homoglyphs():
+    assert fold_homoglyphs("kmthb") == "кмтнв"
