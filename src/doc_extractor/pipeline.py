@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
+from doc_extractor.confidence import field_confidence
 from doc_extractor.conflicts import find_conflicts
 from doc_extractor.grounding import ground
 from doc_extractor.llm import LLMClient
@@ -48,9 +49,10 @@ def extract(text: str, client: LLMClient) -> Extraction:
 
     facts = analyze(text)
     grounded = ground(answer, facts)
+    warnings = grounded.warnings + find_conflicts(facts)
     result = ExtractionResult(
         **grounded.answer.model_dump(),
-        field_confidence={},
-        warnings=grounded.warnings + find_conflicts(facts),
+        field_confidence=field_confidence(grounded.answer, grounded.status, warnings),
+        warnings=warnings,
     )
     return Extraction(result, False)
