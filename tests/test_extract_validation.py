@@ -53,7 +53,7 @@ def test_non_json_answer_is_retried_with_error_text():
     assert len(client.calls) == 2
     retry = " ".join(m["content"] for m in client.calls[1])
     assert "это не json" in retry
-    assert "JSON" in retry or "json" in retry
+    assert "json_invalid" in retry or "Invalid JSON" in retry
     assert len(client.calls[1]) > len(client.calls[0])
 
 
@@ -115,9 +115,20 @@ def test_markdown_fence_is_stripped():
     {"currency": "тг"},
     {"doc_type": "Счёт на оплату"},
     {"total_amount": -1},
+    {"total_amount": "Infinity"},
+    {"vat_amount": "-Infinity"},
 ])
 def test_invalid_values_are_retried(patch):
     client = ScriptedClient([json.dumps({**VALID, **patch}), VALID_JSON])
+    ex = extract(TEXT, client)
+    assert ex.validation_failed is False
+    assert len(client.calls) == 2
+
+
+def test_nan_is_retried():
+    bad = VALID_JSON.replace('"total_amount": 186180', '"total_amount": NaN')
+    assert "NaN" in bad
+    client = ScriptedClient([bad, VALID_JSON])
     ex = extract(TEXT, client)
     assert ex.validation_failed is False
     assert len(client.calls) == 2

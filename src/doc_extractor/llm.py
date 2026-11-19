@@ -4,6 +4,8 @@ from typing import Protocol
 from doc_extractor.schema import model_answer_json_schema
 
 DEFAULT_MODEL = "qwen3.5:9b"
+NUM_CTX = 8192
+TIMEOUT_SECONDS = 300
 
 
 def model_from_env() -> str:
@@ -39,22 +41,28 @@ class OllamaClient:
         self.model = model or model_from_env()
 
     def complete(self, messages: list[dict[str, str]]) -> str:
+        import httpx
         import ollama
 
         try:
-            response = ollama.chat(
+            client = ollama.Client(timeout=TIMEOUT_SECONDS)
+            response = client.chat(
                 model=self.model,
                 messages=messages,
                 think=False,
-                options={"temperature": 0},
+                options={"temperature": 0, "num_ctx": NUM_CTX},
                 format=model_answer_json_schema(),
             )
-        except ConnectionError as e:
-            raise LLMUnavailableError(f"Ollama не запущена: {e}") from e
         except ollama.ResponseError as e:
             if e.status_code == 404 or "not found" in str(e).lower():
                 raise LLMUnavailableError(
                     f"модель {self.model} не скачана: {e}"
                 ) from e
-            raise
+            raise LLMUnavailableError(f"Ollama вернула ошибку: {e}") from e
+        except httpx.TimeoutException as e:
+            raise LLMUnavailableError(
+                f"Ollama не ответила за {TIMEOUT_SECONDS} с: {e}"
+            ) from e
+        except (httpx.HTTPError, ConnectionError) as e:
+            raise LLMUnavailableError(f"Ollama недоступна: {e}") from e
         return response["message"]["content"]

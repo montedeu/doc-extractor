@@ -11,8 +11,8 @@ class LineItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1)
-    qty: float | None = Field(ge=0)
-    price: float | None = Field(ge=0)
+    qty: float | None = Field(ge=0, allow_inf_nan=False)
+    price: float | None = Field(ge=0, allow_inf_nan=False)
 
 
 class ModelAnswer(BaseModel):
@@ -22,12 +22,12 @@ class ModelAnswer(BaseModel):
 
     doc_type: DocType
     supplier_name: str | None
-    supplier_bin: str | None = Field(pattern=r"^\d{12}$")
+    supplier_bin: str | None = Field(pattern=r"^[0-9]{12}$")
     doc_number: str | None
     doc_date: date | None
     currency: Currency | None
-    total_amount: float | None = Field(ge=0)
-    vat_amount: float | None = Field(ge=0)
+    total_amount: float | None = Field(ge=0, allow_inf_nan=False)
+    vat_amount: float | None = Field(ge=0, allow_inf_nan=False)
     line_items: list[LineItem]
 
 
