@@ -210,3 +210,18 @@ def test_doc_number_homoglyphs_status_ok():
     assert g.answer.doc_number == "АВ-12"
     b = ModelAnswer.model_validate(gold("01") | {"doc_number": "312"})
     assert ground(b, analyze("Счёт № 3l2")).status["doc_number"] == "ocr_corrected"
+
+
+def _vat0(text: str):
+    return run(text, gold("01") | {"vat_amount": 0, "total_amount": 100000}).vat_amount
+
+
+def test_vat_exempt_phrase_across_line_break():
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nОсвобождено от\nНДС\n") == 0
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nНДС\nне облагается\n") == 0
+
+
+def test_bare_without_vat_must_be_whole_line():
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nСумма без НДС:\n100 000\n") is None
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nЦена без НДС\n") is None
+    assert _vat0("Счёт № 5 от 12.11.2026\nИтого: 100 000\nБез НДС.\n") == 0

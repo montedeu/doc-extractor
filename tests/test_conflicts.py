@@ -118,3 +118,16 @@ def test_period_and_payment_dates_not_conflicts():
 def test_prepayment_not_conflict():
     text = "К оплате (предоплата 50%): 74 472 тенге\nВсего к оплате: 148 944"
     assert warnings_of(text, "conflicting_totals") == []
+
+
+def test_number_from_needs_document_title_before_it():
+    text = (
+        "Счёт № 5 от 01.02.2026\nПлатёжное поручение № 3 от 10.02.2026\n"
+        "Основание: протокол № 4 от 01.01.2025"
+    )
+    assert warnings_of(text, "conflicting_dates") == []
+
+
+def test_prepayment_excluded_from_fallback_words_check():
+    text = "Итого: 1000\nК оплате аванс: 500\nпятьсот тенге"
+    assert len(warnings_of(text, "amount_words_mismatch")) == 1

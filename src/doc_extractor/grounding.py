@@ -21,8 +21,9 @@ _VAT_WORD = re.compile(r"ндс|ққс")
 _VAT_EXEMPT = re.compile(
     r"ндс\s+не\s+облагается|не\s+облагается\s+ндс|освобожд\w*\s+от\s+ндс"
     r"|ққс\s*-?\s*сыз|ққс\s+салынбайды"
-    r"|(?<![^\W\d_])без\s+ндс(?!.*\d)"  # «Без НДС» без числа дальше в той же строке
 )
+# голое «Без НДС»: вся строка — эта фраза (допускается пара «ҚҚС-сыз / Без НДС»)
+_VAT_BARE = re.compile(r"(?:ққс\s*-?\s*сыз\s*/\s*)?без\s+ндс\s*[:.]?")
 _L = r"[а-яёәіңғүұқөһa-z0-9]"
 _B = r"(?<![^\W\d_])(?<!-)"  # слева не буква и не дефис
 _E = r"(?![^\W\d_])(?!-)"
@@ -218,9 +219,10 @@ def ground(answer: ModelAnswer, facts: DocFacts) -> Grounded:
 
     if a.vat_amount is not None:
         if a.vat_amount == 0:
-            vat_st: FieldStatus | None = (
-                "ok" if any(_VAT_EXEMPT.search(x) for x in facts.lines) else None
+            exempt = _VAT_EXEMPT.search(facts.folded) or any(
+                _VAT_BARE.fullmatch(x.strip()) for x in facts.lines
             )
+            vat_st: FieldStatus | None = "ok" if exempt else None
         elif _VAT_WORD.search(facts.folded):
             vat_st = _number_status(a.vat_amount, facts)
         else:

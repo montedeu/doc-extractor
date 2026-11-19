@@ -28,7 +28,9 @@ _NOT_AMOUNT_TAIL = re.compile(r"\s*(?:%|тиын|тийін|дн|день|дне
 _NOT_WORDS_LINE = re.compile(r"ндс|ққс|наименован|позици")
 _PREPAYMENT = re.compile(r"предоплат|аванс|частичн")
 # «№ <номер> от <дата>»: «от» сразу после номера документа
-_AFTER_NUMBER = re.compile(r"№\s*[^\s№]+\s*$")
+_AFTER_NUMBER = re.compile(
+    r"(?:сч[её]т|шот|акт|накладн|предложени|\bкп\b)[^№]*№\s*[^\s№]+\s*$"
+)
 # «Счёт от <дата>»: «от» после названия документа в начале строки (только слова, не больше 4)
 _AFTER_TITLE = re.compile(
     r"^\s*(?:сч[её]т|шот|акт|накладн|предложени|коммерческ)[а-яёәіңғүұқөһ-]*(?:\s+[а-яёәіңғүұқөһ-]+){0,3}\s*$"
@@ -90,7 +92,7 @@ def _conflicting_totals(lines: list[str]) -> list[str]:
 def _words_mismatch(facts: DocFacts, lines: list[str]) -> list[str]:
     if not facts.amounts_in_words:
         return []
-    lines = [x for x in lines if not _NOT_WORDS_LINE.search(x)]
+    lines = [x for x in lines if not _NOT_WORDS_LINE.search(x) and not _PREPAYMENT.search(x)]
     # промежуточное «Итого» не участвует, если в документе есть строка «к оплате»
     payable = _payable_lines(lines)
     digits = _total_amounts(payable, _PAYABLE) if payable else _total_amounts(lines, _TOTAL)
@@ -124,6 +126,6 @@ def _conflicting_dates(text: str) -> list[str]:
 
 
 def find_conflicts(facts: DocFacts) -> list[str]:
-    lines = [normalize_string(line) for line in facts.text.splitlines()]
+    lines = facts.lines
     text = "\n".join(lines)
     return _conflicting_totals(lines) + _words_mismatch(facts, lines) + _conflicting_dates(text)
