@@ -1,7 +1,7 @@
 {
   "model": "qwen3.5:9b",
-  "recorded_at": "2026-11-19T11:49:14Z",
+  "recorded_at": "2026-11-19T12:17:56Z",
   "responses": [
-    "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ТОО \\\"Кокжиек Курылыс\\\"\",\n  \"supplier_bin\": null,\n  \"doc_number\": \"AKT-09\",\n  \"doc_date\": \"2026-10-09\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 340000,\n  \"vat_amount\": null,\n  \"line_items\": [\n    {\n      \"name\": \"Оказание услуг\",\n      \"qty\": 1,\n      \"price\": 340000.00\n    }\n  ]\n}"
+    "{\n  \"doc_type\": \"act\",\n  \"supplier_name\": \"ТОО \\\"Кокжиек Курылыс\\\"\",\n  \"supplier_bin\": \"210640900180\",\n  \"doc_number\": \"AKT-09\",\n  \"doc_date\": \"2026-10-09\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 340000,\n  \"vat_amount\": 0,\n  \"line_items\": [\n    {\n      \"name\": \"Қызмет көрсету / Оказание услуг\",\n      \"qty\": 1,\n      \"price\": 340000.00\n    }\n  ]\n}"
   ]
 }
