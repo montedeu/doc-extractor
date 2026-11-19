@@ -1,9 +1,11 @@
 """Нормализация текста документа для сверки с текстом (ADR 0001)."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+from doc_extractor.numerals import find_amounts_in_words
 
 _SPACES = "   "
 
@@ -154,6 +156,7 @@ class DocFacts:
     numbers: set[Decimal]
     dates: set[date]
     raw_numbers: set[Decimal]  # без исправления OCR: отличает ocr_corrected от ok
+    amounts_in_words: list[int] = field(default_factory=list)
 
     def has_number(self, x: float) -> bool:
         return _quant(Decimal(str(x))) in self.numbers
@@ -164,10 +167,13 @@ class DocFacts:
 
 def analyze(text: str) -> DocFacts:
     fixed = fix_ocr_digits(text)
+    words = find_amounts_in_words(text)
+    word_nums = {_quant(Decimal(n)) for n in words}
     return DocFacts(
         text=text,
         folded=normalize_string(text),
-        numbers=_parse_numbers(fixed),
+        numbers=_parse_numbers(fixed) | word_nums,
         dates=_parse_dates(normalize_string(text)),
-        raw_numbers=_parse_numbers(text),
+        raw_numbers=_parse_numbers(text) | word_nums,
+        amounts_in_words=words,
     )
