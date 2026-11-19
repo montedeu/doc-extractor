@@ -50,4 +50,27 @@ def test_edge_cases():
     assert parse_amount_words("двести два") == 202
     assert parse_amount_words("семьдесят семь") == 77
     assert parse_amount_words("не число") is None
-    assert find_amounts_in_words("один из вариантов") == [1]
+
+
+def test_context_filter():
+    for t in ["Он сказал", "Один раз в одно место", "СТО Авто", "один из вариантов",
+              "12 тысяч рублей"]:
+        assert find_amounts_in_words(t) == [], t
+    assert find_amounts_in_words("пять тысяч рублей пятьдесят копеек") == [5000]
+    assert find_amounts_in_words("Итого: сто USD") == [100]
+
+
+def test_oblique_forms():
+    assert find_amounts_in_words("двух тысяч тенге") == [2000]
+    assert find_amounts_in_words("одну тысячу тенге") == [1000]
+    assert find_amounts_in_words("трёх тысяч тенге") == [3000]
+    assert find_amounts_in_words("пятисот тенге") == [500]
+
+
+def test_latin_homoglyphs():
+    assert find_amounts_in_words("пятьсоt тенге") == [500]  # латинская t
+    assert find_amounts_in_words("пятьсот тенге".replace("о", "o")) == [500]  # латинская o
+
+
+def test_line_break_inside_phrase():
+    assert find_amounts_in_words("Пятьсот\nтысяч тенге") == [500000]
