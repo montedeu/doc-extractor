@@ -16,6 +16,10 @@ class LLMUnavailableError(Exception):
     """Ollama не запущена или модель не скачана."""
 
 
+class ScriptExhaustedError(Exception):
+    """ScriptedClient: заготовленные ответы кончились, а вызов пришёл."""
+
+
 class LLMClient(Protocol):
     def complete(self, messages: list[dict[str, str]]) -> str: ...
 
@@ -30,10 +34,14 @@ class ScriptedClient:
     def complete(self, messages: list[dict[str, str]]) -> str:
         self.calls.append(messages)
         if not self._responses:
-            raise AssertionError(
+            raise ScriptExhaustedError(
                 f"ScriptedClient: ответы кончились, вызов №{len(self.calls)} лишний"
             )
         return self._responses.pop(0)
+
+    @property
+    def remaining(self) -> int:
+        return len(self._responses)
 
 
 class OllamaClient:

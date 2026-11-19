@@ -1,0 +1,7 @@
+{
+  "model": "qwen3.5:9b",
+  "recorded_at": "2026-11-19T11:49:14Z",
+  "responses": [
+    "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ТОО \\\"Алматы Трейд Компани\\\"\",\n  \"supplier_bin\": \"170340021554\",\n  \"doc_number\": \"1245\",\n  \"doc_date\": \"2026-11-12\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 186180,\n  \"vat_amount\": 25680,\n  \"line_items\": [\n    {\n      \"name\": \"Бумага А4 80г/м2\",\n      \"qty\": 50,\n      \"price\": 2100.00\n    },\n    {\n      \"name\": \"Картридж HP 85A\",\n      \"qty\": 3,\n      \"price\": 18500.00\n    }\n  ]\n}"
+  ]
+}
