@@ -177,3 +177,20 @@ def analyze(text: str) -> DocFacts:
         raw_numbers=_parse_numbers(text) | word_nums,
         amounts_in_words=words,
     )
+
+
+_NAME_QUOTES = str.maketrans("", "", "«»\"“”„‟'")
+_ZERO_BETWEEN_LETTERS = re.compile(r"(?<=[^\W\d_])0(?=[^\W\d_])")
+# после fold_homoglyphs + casefold: ТОО/TOO/T0O -> тоо, LLP -> llр
+_OPF = re.compile(r"(?<!\w)(?:тоо|жшс|ип|ао|llр)(?!\w)")
+
+
+def name_core(name: str) -> str:
+    """Название без ОПФ и кавычек, для сравнения; правила как у scoring.normalize_name."""
+    s = name.translate(_NAME_QUOTES)
+    prev = None
+    while prev != s:  # «T00»: lookaround не видит соседний 0, нужен повтор
+        prev = s
+        s = _ZERO_BETWEEN_LETTERS.sub("О", s)
+    s = fold_homoglyphs(s).casefold()
+    return " ".join(_OPF.sub(" ", s).split())
