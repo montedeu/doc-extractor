@@ -1,0 +1,16 @@
+{
+  "doc_type": "unknown",
+  "supplier_name": null,
+  "supplier_bin": null,
+  "doc_number": null,
+  "doc_date": null,
+  "currency": null,
+  "total_amount": null,
+  "vat_amount": null,
+  "line_items": [],
+  "expect_warnings": false,
+  "_notes": [
+    "Сложный: это не документ, а письмо. Всё null, line_items пустой.",
+    "Главный тест на галлюцинации: телефон не БИН, 'как в прошлый раз' не сумма, 'до пятницы' не дата."
+  ]
+}

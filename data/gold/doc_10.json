@@ -1,0 +1,28 @@
+{
+  "doc_type": "invoice",
+  "supplier_name": "ИП \"Омаров Т.Б.\"",
+  "supplier_bin": null,
+  "doc_number": "77",
+  "doc_date": "2026-11-02",
+  "currency": "KZT",
+  "total_amount": 40000,
+  "vat_amount": 0,
+  "line_items": [
+    {
+      "name": "Ремонт кондиционера Midea 12",
+      "qty": 1,
+      "price": 25000
+    },
+    {
+      "name": "Заправка фреоном R410",
+      "qty": 1,
+      "price": 15000
+    }
+  ],
+  "expect_warnings": false,
+  "_notes": [
+    "Сложный, ловушки: у ИП есть ИИН, а не БИН -> supplier_bin = null.",
+    "БИН покупателя не должен попасть в supplier_bin. ИИК — номер счёта, не БИН.",
+    "Дата документа 02.11, а не срок оплаты 25.11."
+  ]
+}

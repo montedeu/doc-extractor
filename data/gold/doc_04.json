@@ -1,0 +1,27 @@
+{
+  "doc_type": "invoice",
+  "supplier_name": "ТОО \"Steppe Cloud Services\"",
+  "supplier_bin": "190440012341",
+  "doc_number": "INV-2026-311",
+  "doc_date": "2026-11-03",
+  "currency": "USD",
+  "total_amount": 713.4,
+  "vat_amount": 98.4,
+  "line_items": [
+    {
+      "name": "Лицензия Jira Cloud (1 польз./мес.)",
+      "qty": 25,
+      "price": 8.6
+    },
+    {
+      "name": "Настройка рабочего пространства",
+      "qty": 1,
+      "price": 400.0
+    }
+  ],
+  "expect_warnings": false,
+  "_notes": [
+    "Простой случай в долларах.",
+    "В тексте 'TOO' латиницей — в эталоне пишем нормально 'ТОО'; при сравнении имён нормализуй."
+  ]
+}
