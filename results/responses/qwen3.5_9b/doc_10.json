@@ -1,6 +1,7 @@
 {
   "model": "qwen3.5:9b",
-  "recorded_at": "2026-11-19T12:17:56Z",
+  "recorded_at": "2026-11-19T13:04:06Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
   "responses": [
     "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ИП \\\"Омаров Т.Б.\\\"\",\n  \"supplier_bin\": null,\n  \"doc_number\": \"77\",\n  \"doc_date\": \"2026-11-02\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 40000,\n  \"vat_amount\": 0,\n  \"line_items\": [\n    {\n      \"name\": \"Ремонт кондиционера Midea 12\",\n      \"qty\": 1,\n      \"price\": 25000\n    },\n    {\n      \"name\": \"Заправка фреоном R410\",\n      \"qty\": 1,\n      \"price\": 15000\n    }\n  ]\n}"
   ]

@@ -1,6 +1,7 @@
 {
   "model": "qwen3.5:9b",
-  "recorded_at": "2026-11-19T12:17:56Z",
+  "recorded_at": "2026-11-19T13:04:06Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
   "responses": [
     "{\n  \"doc_type\": \"invoice\",\n  \"supplier_name\": \"ТОО \\\"Береке Принт\\\"\",\n  \"supplier_bin\": \"150940016484\",\n  \"doc_number\": \"312\",\n  \"doc_date\": \"2026-10-21\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 39440,\n  \"vat_amount\": 5440,\n  \"line_items\": [\n    {\n      \"name\": \"Визитки 90x50 мм\",\n      \"qty\": 1000,\n      \"price\": 25.00\n    },\n    {\n      \"name\": \"Баннер 3x6 м\",\n      \"qty\": 2,\n      \"price\": 4500.00\n    }\n  ]\n}"
   ]

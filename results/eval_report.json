@@ -1,5 +1,5 @@
 {
-  "model": "qwen3.5:9b",
+  "model": "qwen3.5:4b",
   "mode": "replay",
   "outcomes": {
     "doc_type": {
@@ -7,11 +7,13 @@
       "wrong": 1
     },
     "supplier_name": {
-      "correct": 9,
-      "miss": 1
+      "correct": 6,
+      "wrong": 2,
+      "miss": 2
     },
     "supplier_bin": {
-      "correct": 10
+      "correct": 8,
+      "miss": 2
     },
     "doc_number": {
       "correct": 10
@@ -23,41 +25,40 @@
       "correct": 10
     },
     "total_amount": {
-      "correct": 10
+      "correct": 9,
+      "miss": 1
     },
     "vat_amount": {
       "correct": 10
     },
     "line_items.name": {
-      "correct": 14,
-      "miss": 2,
-      "hallucination": 2
+      "correct": 16
     },
     "line_items.qty": {
-      "correct": 14,
-      "miss": 2
+      "correct": 15,
+      "miss": 1
     },
     "line_items.price": {
-      "correct": 14,
-      "miss": 2
+      "correct": 15,
+      "miss": 1
     }
   },
   "accuracy": {
     "doc_type": 0.9,
-    "supplier_name": 0.9,
-    "supplier_bin": 1.0,
+    "supplier_name": 0.6,
+    "supplier_bin": 0.8,
     "doc_number": 1.0,
     "doc_date": 1.0,
     "currency": 1.0,
-    "total_amount": 1.0,
+    "total_amount": 0.9,
     "vat_amount": 1.0,
-    "line_items.name": 0.7777777777777778,
-    "line_items.qty": 0.875,
-    "line_items.price": 0.875
+    "line_items.name": 1.0,
+    "line_items.qty": 0.9375,
+    "line_items.price": 0.9375
   },
-  "order_ok": 6,
-  "order_total": 6,
-  "warnings_ok": 6,
+  "order_ok": 7,
+  "order_total": 7,
+  "warnings_ok": 4,
   "warnings_total": 10,
   "per_doc": {
     "doc_01": {
@@ -66,36 +67,31 @@
       "warnings_ok": false
     },
     "doc_02": {
-      "issues": [
-        "supplier_name: miss (модель None, эталон 'Digital Solutions')",
-        "line_items.name: miss [Разработка сайта]",
-        "line_items.qty: miss [Разработка сайта]",
-        "line_items.price: miss [Разработка сайта]",
-        "line_items.name: miss [Техподдержка, в месяц]",
-        "line_items.qty: miss [Техподдержка, в месяц]",
-        "line_items.price: miss [Техподдержка, в месяц]",
-        "line_items.name: hallucination [Разработка сайта — 450 000 тг]",
-        "line_items.name: hallucination [Техподдержка, в месяц — 60 000 тг]"
-      ],
+      "issues": [],
       "order_ok": true,
-      "warnings_ok": true
+      "warnings_ok": false
     },
     "doc_03": {
       "issues": [
-        "doc_type: wrong (модель 'act', эталон 'invoice')"
+        "doc_type: wrong (модель 'commercial_offer', эталон 'invoice')",
+        "supplier_bin: miss (модель None, эталон '210640900180')"
       ],
       "order_ok": true,
       "warnings_ok": false
     },
     "doc_04": {
-      "issues": [],
+      "issues": [
+        "supplier_name: wrong (модель 'ООО \"Steppe Cloud Services\"', эталон 'ТОО \"Steppe Cloud Services\"')"
+      ],
       "order_ok": true,
       "warnings_ok": true
     },
     "doc_05": {
-      "issues": [],
+      "issues": [
+        "total_amount: miss (модель None, эталон 350000.0)"
+      ],
       "order_ok": true,
-      "warnings_ok": true
+      "warnings_ok": false
     },
     "doc_06": {
       "issues": [],
@@ -103,12 +99,19 @@
       "warnings_ok": false
     },
     "doc_07": {
-      "issues": [],
+      "issues": [
+        "supplier_name: miss (модель None, эталон 'ТОО \"Береке Принт\"')"
+      ],
       "order_ok": true,
-      "warnings_ok": false
+      "warnings_ok": true
     },
     "doc_08": {
-      "issues": [],
+      "issues": [
+        "supplier_name: wrong (модель 'ЖШС «Алтын Дала Агро»', эталон 'ТОО «Алтын Дала Агро»')",
+        "supplier_bin: miss (модель None, эталон '210340055170')",
+        "line_items.qty: miss [Тұқым (бидай) / Семена пшеницы] (модель None, эталон 2)",
+        "line_items.price: miss [Тұқым (бидай) / Семена пшеницы] (модель None, эталон 180000)"
+      ],
       "order_ok": true,
       "warnings_ok": true
     },
@@ -118,9 +121,11 @@
       "warnings_ok": true
     },
     "doc_10": {
-      "issues": [],
+      "issues": [
+        "supplier_name: miss (модель None, эталон 'ИП \"Омаров Т.Б.\"')"
+      ],
       "order_ok": true,
-      "warnings_ok": true
+      "warnings_ok": false
     }
   }
 }

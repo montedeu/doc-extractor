@@ -1,0 +1,8 @@
+{
+  "model": "qwen3.5:4b",
+  "recorded_at": "2026-11-19T13:13:41Z",
+  "prompt_sha256": "0f6924c333b8a34c58e5fb52beee333e38a777c1985d95012a81c4cf7b0af7f6",
+  "responses": [
+    "{\n  \"doc_type\": \"commercial_offer\",\n  \"supplier_name\": \"Digital Solutions\",\n  \"supplier_bin\": null,\n  \"doc_number\": null,\n  \"doc_date\": \"2026-11-05\",\n  \"currency\": \"KZT\",\n  \"total_amount\": 510000,\n  \"vat_amount\": null,\n  \"line_items\": [\n    {\n      \"name\": \"Разработка сайта\",\n      \"qty\": null,\n      \"price\": 450000.0\n    },\n    {\n      \"name\": \"Техподдержка, в месяц\",\n      \"qty\": null,\n      \"price\": 60000.0\n    }\n  ]\n}"
+  ]
+}
