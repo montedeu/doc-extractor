@@ -5,12 +5,12 @@ from datetime import date
 from decimal import Decimal
 
 from doc_extractor.normalize import (
-    _NUMBER,
-    _SPACES,
+    NUMBER_RE,
+    SPACES_RE,
     DocFacts,
-    _parse_dates,
-    _variants,
     normalize_string,
+    number_variants,
+    parse_dates,
 )
 
 _PAYABLE = re.compile(r"к оплате|төлеуге")
@@ -24,18 +24,23 @@ _CREATION = re.compile(
     rf"|^\s*дата\s*:?\s*({_DATE})",
     re.MULTILINE,
 )
-_NOT_AMOUNT_TAIL = re.compile(r"\s*(?:%|тиын|тийін)")  # процент, тиыны прописью
+_NOT_AMOUNT_TAIL = re.compile(r"\s*(?:%|тиын|тийін|дн|день|дней|календар|банковск|рабоч|шт|мес)")  # процент, тиыны прописью
+_NOT_FROM_CONTRACT = re.compile(
+    r"договор|контракт|доверенност|спецификац|заказ|приложени"
+)
+_DOC_MARK = re.compile(r"сч[её]т|шот|акт|накладн|предложени|^\s*№")
+_NOT_WORDS_LINE = re.compile(r"ндс|ққс|наименован|позици")
 _NOT_CREATION = re.compile(r"срок|действительн|действует|действ\.")
 
 
 def _amount_after(line: str, start: int) -> Decimal | None:
     """Первое число после метки, не процент."""
-    for m in _NUMBER.finditer(line, start):
+    for m in NUMBER_RE.finditer(line, start):
         if _NOT_AMOUNT_TAIL.match(line[m.end():]):
             continue
-        tok = re.sub(f"[{_SPACES}]", "", m.group(0))
+        tok = re.sub(f"[{SPACES_RE}]", "", m.group(0))
         # неоднозначное «148.944»: для сумм читаем как группу тысяч
-        return Decimal(min(_variants(tok), key=len))
+        return Decimal(min(number_variants(tok), key=len))
     return None
 
 
@@ -65,8 +70,8 @@ def _conflicting_totals(lines: list[str]) -> list[str]:
 def _words_mismatch(facts: DocFacts, lines: list[str]) -> list[str]:
     if not facts.amounts_in_words:
         return []
-    digits = _total_amounts(lines, _TOTAL)
-    if not digits or any(d != d.to_integral_value() for d in digits):
+    digits = _total_amounts([x for x in lines if not _NOT_WORDS_LINE.search(x)], _TOTAL)
+    if not digits:
         return []
     have = {int(d) for d in digits}
     bad = [w for w in dict.fromkeys(facts.amounts_in_words) if w not in have]
@@ -84,9 +89,14 @@ def _conflicting_dates(text: str) -> list[str]:
     found: set[date] = set()
     for m in _CREATION.finditer(text):
         line_start = text.rfind("\n", 0, m.start()) + 1
-        if _NOT_CREATION.search(text[line_start : m.start()]):
+        prefix = text[line_start : m.start()]
+        if _NOT_CREATION.search(prefix):
             continue
-        found |= _parse_dates(m.group(1) or m.group(2))
+        if m.group(0).startswith("от") and (
+            _NOT_FROM_CONTRACT.search(prefix) or not _DOC_MARK.search(prefix)
+        ):
+            continue
+        found |= parse_dates(m.group(1) or m.group(2))
     if len(found) < 2:
         return []
     return ["conflicting_dates: " + " / ".join(d.strftime("%d.%m.%Y") for d in sorted(found))]
