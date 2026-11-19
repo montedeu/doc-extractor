@@ -1,2 +1,3 @@
-ollama\mpydantic
-pytest
+ollama==0.6.3
+pydantic==2.14.3
+pytest==9.2.0
