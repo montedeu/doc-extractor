@@ -147,7 +147,7 @@ def evaluate(results: dict[str, dict], golds: dict[str, dict]) -> Report:
     return report
 
 
-def format_report(report: Report) -> str:
+def format_report(report: Report, total_docs: int | None = None) -> str:
     rows = []
     totals: Counter = Counter()
     for f in ALL_FIELDS:
@@ -173,6 +173,9 @@ def format_report(report: Report) -> str:
     lines.append(
         f"Предупреждения совпали с ожиданием: {report.warnings_ok} из {report.warnings_total} документов"
     )
+    if total_docs is not None:
+        done = sum(1 for info in report.per_doc.values() if not info.get("error"))
+        lines.append(f"Документов в расчёте: {done} из {total_docs}")
 
     lines.append("")
     lines.append("По документам (расхождения):")

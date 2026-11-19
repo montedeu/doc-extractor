@@ -102,6 +102,16 @@ def test_non_numeric_amount_is_wrong_not_crash():
     assert compare_field("total_amount", 2.675, 2.68) == "correct"
 
 
+def test_documents_count_line_only_when_total_given():
+    r = evaluate(
+        {"a": doc(), "b": doc()},
+        {"a": gold(), "b": gold(), "c": gold()},
+    )
+    r.per_doc["c"] = {"error": "нет записанного ответа"}
+    assert "Документов в расчёте" not in format_report(r)
+    assert "Документов в расчёте: 2 из 3" in format_report(r, total_docs=3)
+
+
 def test_order_denominator_counts_only_docs_with_two_pairs():
     A = item("Альфа")
     r = run(doc(line_items=[A]), gold(line_items=[A]))

@@ -20,6 +20,11 @@ def _decode(data: bytes) -> str:
     return data.decode("utf-8-sig")
 
 
+def _normalize_newlines(text: str) -> str:
+    # переводы строк приводим к \n, как при чтении файла (universal newlines)
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def main(
     argv: list[str] | None = None,
     client: LLMClient | None = None,
@@ -56,6 +61,7 @@ def main(
                 text = _decode(buffer.read())
             else:
                 text = stdin.read()
+            text = _normalize_newlines(text)
         except UnicodeDecodeError:
             print("Ввод на stdin не в кодировке UTF-8", file=stderr)
             return EXIT_INPUT_ERROR
